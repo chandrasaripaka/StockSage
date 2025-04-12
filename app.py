@@ -641,136 +641,139 @@ language=en_US""")
             st.subheader("Advanced Options")
             
             # Private Key Management
-            with st.expander("Private Key Management"):
-                st.markdown("View or modify the current private key content")
+            st.subheader("Private Key Management")
+            st.markdown("View or modify the current private key content")
+            
+            # Show current key path and size
+            if os.path.exists('tiger_private_key.pem'):
+                key_size = os.path.getsize('tiger_private_key.pem')
+                st.info(f"Private key file exists: tiger_private_key.pem ({key_size} bytes)")
                 
-                # Show current key path and size
-                if os.path.exists('tiger_private_key.pem'):
-                    key_size = os.path.getsize('tiger_private_key.pem')
-                    st.info(f"Private key file exists: tiger_private_key.pem ({key_size} bytes)")
-                    
-                    # Option to view key content (with warning)
-                    if st.checkbox("Show private key content (not recommended)", key="show_key"):
-                        try:
-                            with open('tiger_private_key.pem', 'r') as f:
-                                key_content = f.read()
-                            st.text_area("Private Key Content", value=key_content, height=200)
-                        except Exception as e:
-                            st.error(f"Error reading key file: {str(e)}")
-                else:
-                    st.warning("No private key file found")
-                
-                # Option to delete key
-                if st.button("Delete Private Key File", key="delete_key"):
+                # Option to view key content (with warning)
+                if st.checkbox("Show private key content (not recommended)", key="show_key"):
                     try:
-                        if os.path.exists('tiger_private_key.pem'):
-                            os.remove('tiger_private_key.pem')
-                            st.success("Private key file deleted")
-                        else:
-                            st.info("No private key file to delete")
+                        with open('tiger_private_key.pem', 'r') as f:
+                            key_content = f.read()
+                        st.text_area("Private Key Content", value=key_content, height=200)
                     except Exception as e:
-                        st.error(f"Error deleting key file: {str(e)}")
+                        st.error(f"Error reading key file: {str(e)}")
+            else:
+                st.warning("No private key file found")
+            
+            # Option to delete key
+            if st.button("Delete Private Key File", key="delete_key"):
+                try:
+                    if os.path.exists('tiger_private_key.pem'):
+                        os.remove('tiger_private_key.pem')
+                        st.success("Private key file deleted")
+                    else:
+                        st.info("No private key file to delete")
+                except Exception as e:
+                    st.error(f"Error deleting key file: {str(e)}")
             
             # Properties File Management
-            with st.expander("Properties File Management"):
-                st.markdown("View or modify the Tiger properties file")
+            st.markdown("---")
+            st.subheader("Properties File Management")
+            st.markdown("View or modify the Tiger properties file")
+            
+            # Show current properties
+            if os.path.exists('tiger.properties'):
+                st.info("Tiger properties file exists")
                 
-                # Show current properties
-                if os.path.exists('tiger.properties'):
-                    st.info("Tiger properties file exists")
-                    
-                    # Option to view properties
-                    if st.checkbox("Show properties content", key="show_props"):
-                        try:
-                            with open('tiger.properties', 'r') as f:
-                                props_content = f.read()
-                            
-                            # Mask password for security
-                            masked_content = props_content.replace(os.environ.get('TIGER_PRIVATE_KEY_PASSWORD', ''), '*' * 8)
-                            st.text_area("Properties Content", value=masked_content, height=150)
-                        except Exception as e:
-                            st.error(f"Error reading properties file: {str(e)}")
-                else:
-                    st.warning("No properties file found")
-                
-                # Option to regenerate properties file
-                if st.button("Regenerate Properties File", key="regen_props"):
+                # Option to view properties
+                if st.checkbox("Show properties content", key="show_props"):
                     try:
-                        if os.environ.get('TIGER_ID') and os.environ.get('TIGER_PRIVATE_KEY_PASSWORD'):
-                            with open('tiger.properties', 'w') as f:
-                                f.write(f"""tiger_id={os.environ.get('TIGER_ID')}
+                        with open('tiger.properties', 'r') as f:
+                            props_content = f.read()
+                        
+                        # Mask password for security
+                        masked_content = props_content.replace(os.environ.get('TIGER_PRIVATE_KEY_PASSWORD', ''), '*' * 8)
+                        st.text_area("Properties Content", value=masked_content, height=150)
+                    except Exception as e:
+                        st.error(f"Error reading properties file: {str(e)}")
+            else:
+                st.warning("No properties file found")
+            
+            # Option to regenerate properties file
+            if st.button("Regenerate Properties File", key="regen_props"):
+                try:
+                    if os.environ.get('TIGER_ID') and os.environ.get('TIGER_PRIVATE_KEY_PASSWORD'):
+                        with open('tiger.properties', 'w') as f:
+                            f.write(f"""tiger_id={os.environ.get('TIGER_ID')}
 private_key=tiger_private_key.pem
 private_key_password={os.environ.get('TIGER_PRIVATE_KEY_PASSWORD')}
 language=en_US""")
-                            st.success("Properties file regenerated")
-                        else:
-                            st.error("Missing required credentials (Tiger ID or password)")
-                    except Exception as e:
-                        st.error(f"Error regenerating properties file: {str(e)}")
+                        st.success("Properties file regenerated")
+                    else:
+                        st.error("Missing required credentials (Tiger ID or password)")
+                except Exception as e:
+                    st.error(f"Error regenerating properties file: {str(e)}")
             
             # Connection Settings
-            with st.expander("Connection Settings"):
-                st.markdown("Additional connection settings for Tiger Brokers API")
+            st.markdown("---")
+            st.subheader("Connection Settings")
+            st.markdown("Additional connection settings for Tiger Brokers API")
+            
+            # API timeout
+            api_timeout = st.slider(
+                "API Timeout (seconds)", 
+                min_value=10, 
+                max_value=120, 
+                value=30, 
+                step=5,
+                help="Maximum time to wait for API responses"
+            )
+            
+            # Option to disable SSL verification (for development only)
+            disable_ssl = st.checkbox(
+                "Disable SSL Verification (Development Only)", 
+                value=False,
+                help="Warning: Only use this option if you're having certificate issues during development"
+            )
+            
+            # Save settings button
+            if st.button("Save Connection Settings", key="save_conn_settings"):
+                st.session_state['tiger_api_timeout'] = api_timeout
+                st.session_state['tiger_disable_ssl'] = disable_ssl
+                st.success("Connection settings saved")
                 
-                # API timeout
-                api_timeout = st.slider(
-                    "API Timeout (seconds)", 
-                    min_value=10, 
-                    max_value=120, 
-                    value=30, 
-                    step=5,
-                    help="Maximum time to wait for API responses"
-                )
-                
-                # Option to disable SSL verification (for development only)
-                disable_ssl = st.checkbox(
-                    "Disable SSL Verification (Development Only)", 
-                    value=False,
-                    help="Warning: Only use this option if you're having certificate issues during development"
-                )
-                
-                # Save settings button
-                if st.button("Save Connection Settings", key="save_conn_settings"):
-                    st.session_state['tiger_api_timeout'] = api_timeout
-                    st.session_state['tiger_disable_ssl'] = disable_ssl
-                    st.success("Connection settings saved")
-                    
             # Reset All Settings
-            with st.expander("Reset All Settings", expanded=False):
-                st.markdown("⚠️ **Danger Zone**: Reset all Tiger Brokers API settings and credentials")
-                
-                # Confirmation for reset
-                reset_confirm = st.text_input(
-                    "Type 'RESET' to confirm clearing all Tiger Brokers API settings",
-                    key="reset_confirm"
-                )
-                
-                if st.button("Reset All Settings", key="reset_all") and reset_confirm == "RESET":
-                    try:
-                        # Clear environment variables
-                        if 'TIGER_ID' in os.environ:
-                            del os.environ['TIGER_ID']
-                        if 'TIGER_PRIVATE_KEY_PASSWORD' in os.environ:
-                            del os.environ['TIGER_PRIVATE_KEY_PASSWORD']
-                        if 'TIGER_PRIVATE_KEY' in os.environ:
-                            del os.environ['TIGER_PRIVATE_KEY']
-                        
-                        # Reset to demo mode
-                        os.environ['USE_MOCK_TIGER'] = 'true'
-                        
-                        # Delete files
-                        if os.path.exists('tiger_private_key.pem'):
-                            os.remove('tiger_private_key.pem')
-                        if os.path.exists('tiger.properties'):
-                            os.remove('tiger.properties')
-                        
-                        st.success("All Tiger Brokers API settings have been reset!")
-                        st.info("Demo mode has been enabled. Refreshing page...")
-                        
-                        # Refresh the page
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error resetting settings: {str(e)}")
+            st.markdown("---")
+            st.subheader("Reset All Settings")
+            st.markdown("⚠️ **Danger Zone**: Reset all Tiger Brokers API settings and credentials")
+            
+            # Confirmation for reset
+            reset_confirm = st.text_input(
+                "Type 'RESET' to confirm clearing all Tiger Brokers API settings",
+                key="reset_confirm"
+            )
+            
+            if st.button("Reset All Settings", key="reset_all") and reset_confirm == "RESET":
+                try:
+                    # Clear environment variables
+                    if 'TIGER_ID' in os.environ:
+                        del os.environ['TIGER_ID']
+                    if 'TIGER_PRIVATE_KEY_PASSWORD' in os.environ:
+                        del os.environ['TIGER_PRIVATE_KEY_PASSWORD']
+                    if 'TIGER_PRIVATE_KEY' in os.environ:
+                        del os.environ['TIGER_PRIVATE_KEY']
+                    
+                    # Reset to demo mode
+                    os.environ['USE_MOCK_TIGER'] = 'true'
+                    
+                    # Delete files
+                    if os.path.exists('tiger_private_key.pem'):
+                        os.remove('tiger_private_key.pem')
+                    if os.path.exists('tiger.properties'):
+                        os.remove('tiger.properties')
+                    
+                    st.success("All Tiger Brokers API settings have been reset!")
+                    st.info("Demo mode has been enabled. Refreshing page...")
+                    
+                    # Refresh the page
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error resetting settings: {str(e)}")
     
     # Check for API credentials or mock mode
     tiger_credentials = use_mock or all([

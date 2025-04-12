@@ -571,6 +571,17 @@ with tab2:
                 if strategy_type == "moving_average_crossover":
                     params["fast_period"] = st.number_input("Fast MA Period", value=20, min_value=1)
                     params["slow_period"] = st.number_input("Slow MA Period", value=50, min_value=1)
+                    params["ma_type"] = st.selectbox(
+                        "Moving Average Type",
+                        options=["simple", "exponential"],
+                        format_func=lambda x: "Simple" if x == "simple" else "Exponential"
+                    )
+                    params["signal_mode"] = st.selectbox(
+                        "Signal Mode",
+                        options=["crossover", "continuous"],
+                        format_func=lambda x: "Crossover Only" if x == "crossover" else "Continuous",
+                        help="Crossover mode generates signals only at crossover points. Continuous mode generates signals as long as conditions are met."
+                    )
                 
                 elif strategy_type == "rsi":
                     params["rsi_period"] = st.number_input("RSI Period", value=14, min_value=1)

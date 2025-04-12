@@ -221,12 +221,21 @@ class MovingAverageCrossover(BaseStrategy):
     
     Generates buy signals when a faster moving average crosses above a slower moving average,
     and sell signals when the faster MA crosses below the slower MA.
+    
+    Parameters:
+    - fast_period: Period for the faster moving average (default: 20)
+    - slow_period: Period for the slower moving average (default: 50)
+    - signal_mode: 'crossover' for signals only at crossover points, 'continuous' for signals as long as condition holds
+    - ma_type: Type of moving average to use ('simple' or 'exponential')
     """
     
-    def __init__(self, name, symbol, timeframe, fast_period=20, slow_period=50, **kwargs):
+    def __init__(self, name, symbol, timeframe, fast_period=20, slow_period=50, 
+                 signal_mode='crossover', ma_type='simple', **kwargs):
         parameters = {
             'fast_period': fast_period,
-            'slow_period': slow_period
+            'slow_period': slow_period,
+            'signal_mode': signal_mode,
+            'ma_type': ma_type
         }
         super().__init__(name, symbol, timeframe, parameters, **kwargs)
     
@@ -237,25 +246,45 @@ class MovingAverageCrossover(BaseStrategy):
         # Extract parameters
         fast_period = self.parameters.get('fast_period', 20)
         slow_period = self.parameters.get('slow_period', 50)
+        signal_mode = self.parameters.get('signal_mode', 'crossover')
+        ma_type = self.parameters.get('ma_type', 'simple')
         
-        # Calculate moving averages
-        df[f'ma_fast'] = df['close'].rolling(window=fast_period).mean()
-        df[f'ma_slow'] = df['close'].rolling(window=slow_period).mean()
+        # Calculate moving averages based on type
+        if ma_type == 'simple':
+            df['ma_fast'] = df['close'].rolling(window=fast_period).mean()
+            df['ma_slow'] = df['close'].rolling(window=slow_period).mean()
+        elif ma_type == 'exponential':
+            df['ma_fast'] = df['close'].ewm(span=fast_period, adjust=False).mean()
+            df['ma_slow'] = df['close'].ewm(span=slow_period, adjust=False).mean()
+        else:
+            # Default to simple if invalid type
+            df['ma_fast'] = df['close'].rolling(window=fast_period).mean()
+            df['ma_slow'] = df['close'].rolling(window=slow_period).mean()
         
         # Initialize signal column
         df['signal'] = 0
         
-        # Generate signals: 1 for buy, -1 for sell
+        # Generate initial signals: 1 for buy, -1 for sell
         df.loc[df['ma_fast'] > df['ma_slow'], 'signal'] = 1
         df.loc[df['ma_fast'] < df['ma_slow'], 'signal'] = -1
         
-        # We only want the crossover points
-        df['signal_shift'] = df['signal'].shift(1)
-        df['crossover'] = df['signal'] != df['signal_shift']
+        # If crossover mode, keep only signals at crossover points
+        if signal_mode == 'crossover':
+            df['signal_shift'] = df['signal'].shift(1)
+            df['crossover'] = df['signal'] != df['signal_shift']
+            
+            # Keep only crossover points as signals
+            df.loc[~df['crossover'], 'signal'] = 0
         
-        # Keep only crossover points as signals
-        df.loc[~df['crossover'], 'signal'] = 0
+        # Add additional columns for better analysis
+        df['ma_diff'] = df['ma_fast'] - df['ma_slow']
+        df['ma_diff_pct'] = (df['ma_diff'] / df['ma_slow']) * 100
         
+        # Add price to MA distance
+        df['price_to_fast_ma'] = ((df['close'] / df['ma_fast']) - 1) * 100
+        df['price_to_slow_ma'] = ((df['close'] / df['ma_slow']) - 1) * 100
+        
+        self.logger.info(f"Analyzed {len(df)} data points for {self.name} strategy")
         return df
 
 

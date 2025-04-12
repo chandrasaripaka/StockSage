@@ -1625,6 +1625,63 @@ with tab3:
             st.subheader("Intraday Session Analysis")
             st.markdown("Analyze market behavior across different trading sessions")
             
+            # Trading Session Configuration
+            with st.expander("Trading Session Configuration", expanded=True):
+                st.subheader("Configure Trading Sessions")
+                st.markdown("Select which market sessions the trading bot should be active in")
+                
+                # Get current session settings from the trading bot
+                current_settings = trading_bot.get_session_settings()
+                
+                # Session selection with columns
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    regular_hours = st.checkbox("Regular Hours (9:30 AM - 4:00 PM ET)", 
+                                                value=current_settings["regular_hours"],
+                                                help="Trade during standard market hours")
+                
+                with col2:
+                    pre_market = st.checkbox("Pre-Market (4:00 AM - 9:30 AM ET)", 
+                                            value=current_settings["pre_market"],
+                                            help="Trade during pre-market hours (lower liquidity, higher volatility)")
+                
+                with col3:
+                    after_hours = st.checkbox("After Hours (4:00 PM - 8:00 PM ET)", 
+                                             value=current_settings["after_hours"],
+                                             help="Trade during extended hours (lower liquidity, higher volatility)")
+                
+                # Additional information about trading sessions
+                st.info("Different market sessions have unique characteristics that can affect trading strategy performance:")
+                st.markdown("""
+                - **Regular Hours**: Highest liquidity, tighter spreads, more stable price action
+                - **Pre-Market**: Lower volume, wider spreads, potential for gaps on news
+                - **After Hours**: Reduced volume, wider spreads, can see significant moves on earnings reports
+                """)
+                
+                # Apply button with status message
+                if st.button("Apply Session Settings", key="apply_sessions"):
+                    try:
+                        trading_bot.configure_sessions(
+                            regular_hours=regular_hours,
+                            pre_market=pre_market,
+                            after_hours=after_hours
+                        )
+                        st.success("✅ Session settings updated successfully!")
+                        
+                        # Show current status based on the time
+                        is_active = trading_bot.is_trading_session_active()
+                        if is_active:
+                            st.info("Trading bot will execute strategies in the current session")
+                        else:
+                            st.warning("Trading bot is idle during the current session")
+                    except Exception as e:
+                        st.error(f"Error updating session settings: {str(e)}")
+            
+            # Analysis Parameters
+            st.subheader("Session Analysis")
+            st.markdown("Analyze how a stock performs in different market sessions")
+            
             # Input parameters
             col1, col2, col3 = st.columns(3)
             

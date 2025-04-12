@@ -3,6 +3,7 @@ import time
 import json
 import logging
 import threading
+import pytz
 from datetime import datetime, timedelta
 import pandas as pd
 from tiger_client import TigerBrokersClient
@@ -27,6 +28,17 @@ class TradingBot:
         self.tiger_client = None
         self.running_strategies = {}
         self.stop_event = threading.Event()
+        
+        # Session settings for trading
+        self.enable_regular_hours = True
+        self.enable_pre_market = False
+        self.enable_after_hours = False
+        
+        # Time filters for US market sessions
+        self.pre_market_start = datetime.time(4, 0)  # 4:00 AM ET
+        self.regular_hours_start = datetime.time(9, 30)  # 9:30 AM ET
+        self.regular_hours_end = datetime.time(16, 0)  # 4:00 PM ET
+        self.after_hours_end = datetime.time(20, 0)  # 8:00 PM ET
         
     def connect(self):
         """Connect to Tiger Brokers API"""
@@ -319,7 +331,97 @@ language=en_US""")
         
         finally:
             session.close()
+            
+    def configure_sessions(self, regular_hours=True, pre_market=False, after_hours=False):
+        """
+        Configure which market sessions to trade in
+        
+        Parameters:
+        regular_hours (bool): Enable trading during regular market hours (9:30 AM - 4:00 PM ET)
+        pre_market (bool): Enable trading during pre-market (4:00 AM - 9:30 AM ET)
+        after_hours (bool): Enable trading during after-hours (4:00 PM - 8:00 PM ET)
+        """
+        self.enable_regular_hours = regular_hours
+        self.enable_pre_market = pre_market
+        self.enable_after_hours = after_hours
+        
+        self.logger.info(f"Updated session settings: Regular Hours: {regular_hours}, Pre-Market: {pre_market}, After Hours: {after_hours}")
+        return True
+        
+    def get_session_settings(self):
+        """
+        Get the current market session settings
+        
+        Returns:
+        dict: Dictionary with the current session settings
+        """
+        return {
+            "regular_hours": self.enable_regular_hours,
+            "pre_market": self.enable_pre_market,
+            "after_hours": self.enable_after_hours,
+            "pre_market_start": self.pre_market_start,
+            "regular_hours_start": self.regular_hours_start,
+            "regular_hours_end": self.regular_hours_end,
+            "after_hours_end": self.after_hours_end
+        }
     
+    def is_trading_session_active(self):
+        """
+        Check if the current time is within an enabled trading session
+        
+        Returns:
+        bool: True if current time is within an enabled session, False otherwise
+        """
+        # Get current time in US Eastern timezone
+        now = datetime.now()
+        eastern_tz = pytz.timezone('US/Eastern')
+        if now.tzinfo is None:
+            now = pytz.utc.localize(now).astimezone(eastern_tz)
+        else:
+            now = now.astimezone(eastern_tz)
+            
+        # Get current time and weekday
+        current_time = now.time()
+        weekday = now.weekday()
+        
+        # Check if it's a weekend (Saturday=5, Sunday=6)
+        if weekday >= 5:
+            self.logger.info("Weekend: Markets are closed")
+            return False
+            
+        # Check which session the current time falls into
+        if self.pre_market_start <= current_time < self.regular_hours_start:
+            # Pre-market session
+            if self.enable_pre_market:
+                self.logger.info("Pre-market session is active and enabled")
+                return True
+            else:
+                self.logger.info("Pre-market session is active but disabled in settings")
+                return False
+                
+        elif self.regular_hours_start <= current_time < self.regular_hours_end:
+            # Regular market hours
+            if self.enable_regular_hours:
+                self.logger.info("Regular market hours are active and enabled")
+                return True
+            else:
+                self.logger.info("Regular market hours are active but disabled in settings")
+                return False
+                
+        elif self.regular_hours_end <= current_time < self.after_hours_end:
+            # After-hours session
+            if self.enable_after_hours:
+                self.logger.info("After-hours session is active and enabled")
+                return True
+            else:
+                self.logger.info("After-hours session is active but disabled in settings")
+                return False
+                
+        else:
+            # Outside of all trading sessions
+            self.logger.info("Current time is outside all trading sessions")
+            return False
+            
     def update_performance_metrics(self):
         """Update performance metrics for all strategies"""
         for strategy_id, strategy_info in self.running_strategies.items():
@@ -349,17 +451,26 @@ language=en_US""")
         num_strategies = self.load_strategies_from_db()
         self.logger.info(f"Loaded {num_strategies} active strategies from database")
         
+        # Log the session settings
+        self.logger.info(f"Trading session settings: Regular Hours: {self.enable_regular_hours}, Pre-Market: {self.enable_pre_market}, After Hours: {self.enable_after_hours}")
+        
         # Main loop
         self.logger.info("Starting trading bot main loop")
         
         try:
             while not self.stop_event.is_set():
-                # Execute all active strategies
-                for strategy_id in list(self.running_strategies.keys()):
-                    self.execute_strategy(strategy_id)
-                
-                # Update trade statuses
-                self.update_trade_statuses()
+                # First check if we're in an active trading session
+                if self.is_trading_session_active():
+                    self.logger.info("Trading session is active. Executing strategies...")
+                    
+                    # Execute all active strategies
+                    for strategy_id in list(self.running_strategies.keys()):
+                        self.execute_strategy(strategy_id)
+                    
+                    # Update trade statuses
+                    self.update_trade_statuses()
+                else:
+                    self.logger.info("Not in an active trading session. Skipping strategy execution.")
                 
                 # Update performance metrics (less frequently)
                 if datetime.now().hour == 0 and datetime.now().minute < 5:
@@ -372,6 +483,8 @@ language=en_US""")
             self.logger.info("Trading bot stopped by user")
         except Exception as e:
             self.logger.error(f"Error in trading bot main loop: {str(e)}")
+            import traceback
+            self.logger.error(traceback.format_exc())
         finally:
             if self.tiger_client:
                 self.tiger_client.close()

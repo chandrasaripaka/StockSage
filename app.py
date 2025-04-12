@@ -403,16 +403,81 @@ with tab2:
     st.header("Algorithmic Trading")
     st.markdown("Connect to Tiger Brokers API and set up automated trading strategies")
     
-    # Check for API credentials
-    tiger_credentials = all([
+    # Tiger Brokers API Credentials setup
+    api_config_expander = st.expander("Tiger Brokers API Credentials", expanded=not os.environ.get('TIGER_ID'))
+    
+    with api_config_expander:
+        st.markdown("""
+        ### Tiger Brokers API Setup
+        To use algorithmic trading features, you need to configure your Tiger Brokers API credentials.
+        These are used to connect to your paper trading account.
+        """)
+        
+        # Create columns for API inputs
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Show current status of API credentials
+            st.subheader("API Credentials Status")
+            
+            tiger_id_status = "✅ Configured" if os.environ.get('TIGER_ID') else "❌ Not Configured"
+            st.markdown(f"**Tiger ID:** {tiger_id_status}")
+            
+            tiger_key_status = "✅ Configured" if os.environ.get('TIGER_PRIVATE_KEY') and len(os.environ.get('TIGER_PRIVATE_KEY', '')) > 10 else "❌ Not Configured"
+            st.markdown(f"**Private Key:** {tiger_key_status}")
+            
+            tiger_pwd_status = "✅ Configured" if os.environ.get('TIGER_PRIVATE_KEY_PASSWORD') else "❌ Not Configured"
+            st.markdown(f"**Private Key Password:** {tiger_pwd_status}")
+            
+            # Use mock client option
+            st.subheader("Demo Mode")
+            use_mock = st.checkbox("Use demo mode (simulated trading)", value=os.environ.get('USE_MOCK_TIGER', 'true').lower() == 'true')
+            if use_mock:
+                st.info("Using simulated paper trading. No real API credentials required.")
+                # Set environment variable for mock client
+                os.environ['USE_MOCK_TIGER'] = 'true'
+            else:
+                os.environ['USE_MOCK_TIGER'] = 'false'
+                
+        with col2:
+            st.subheader("Configure API Credentials")
+            
+            # Tiger ID input
+            tiger_id = st.text_input("Tiger ID", value=os.environ.get('TIGER_ID', ''), type="default")
+            
+            # Private Key Password input
+            tiger_pwd = st.text_input("Private Key Password", value=os.environ.get('TIGER_PRIVATE_KEY_PASSWORD', ''), type="password")
+            
+            # Private Key file upload (PEM format)
+            st.markdown("**Private Key File (PEM format)**")
+            uploaded_file = st.file_uploader("Upload your private key file", type=['pem', 'txt'])
+            
+            if uploaded_file is not None:
+                private_key = uploaded_file.getvalue().decode('utf-8')
+                # Save to environment variable
+                os.environ['TIGER_PRIVATE_KEY'] = private_key
+                # Also save to file
+                with open('tiger_private_key.pem', 'w') as f:
+                    f.write(private_key)
+                st.success("Private key file uploaded successfully!")
+            
+            # Save button for Tiger ID and password
+            if st.button("Save Credentials"):
+                if tiger_id:
+                    os.environ['TIGER_ID'] = tiger_id
+                if tiger_pwd:
+                    os.environ['TIGER_PRIVATE_KEY_PASSWORD'] = tiger_pwd
+                st.success("Credentials saved!")
+                st.rerun()
+    
+    # Check for API credentials or mock mode
+    tiger_credentials = use_mock or all([
         os.environ.get('TIGER_ID'),
-        os.environ.get('TIGER_PRIVATE_KEY'),
         os.environ.get('TIGER_PRIVATE_KEY_PASSWORD')
     ])
     
     if not tiger_credentials:
-        st.warning("Tiger Brokers API credentials are not configured. Please add them to continue.")
-        st.info("Go to your Tiger Brokers account to generate API credentials, then add them to the environment variables.")
+        st.warning("Tiger Brokers API credentials are not configured and demo mode is disabled. Please set up your credentials or enable demo mode to continue.")
     else:
         # Try to connect to Tiger Brokers API
         if trading_bot is None:

@@ -42,12 +42,8 @@ class TradingBot:
             
             # Otherwise proceed with real client setup
             # Check if API credentials are available in environment
-            if not all([
-                os.environ.get('TIGER_ID'),
-                os.environ.get('TIGER_PRIVATE_KEY'),
-                os.environ.get('TIGER_PRIVATE_KEY_PASSWORD')
-            ]):
-                self.logger.error("Missing one or more Tiger Brokers API credentials in environment")
+            if not os.environ.get('TIGER_ID') or not os.environ.get('TIGER_PRIVATE_KEY_PASSWORD'):
+                self.logger.error("Missing Tiger ID or private key password in environment variables")
                 self.logger.info("Falling back to mock Tiger Brokers client")
                 from tiger_mock_client import MockTigerBrokersClient
                 self.tiger_client = MockTigerBrokersClient()

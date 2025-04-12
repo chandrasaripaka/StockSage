@@ -608,33 +608,33 @@ language=en_US""")
                         st.info("No credential changes detected")
             
             # Instructions for getting credentials
-            with st.expander("Where to get Tiger Brokers API credentials"):
-                st.markdown("""
-                ### Getting Tiger Brokers API Access
-                
-                1. **Create a Tiger Brokers account** if you don't already have one at [tigerbrokers.com](https://www.tigerbrokers.com)
-                
-                2. **Apply for API access**:
-                   - Log in to your Tiger Brokers account
-                   - Navigate to Account Settings
-                   - Find the API section and apply for API access
-                   - This may require verification of your identity
-                
-                3. **Generate API credentials**:
-                   - Once approved, you'll be able to generate your Tiger ID
-                   - Create a private key (download and save the .pem file)
-                   - Create a password to protect your private key
-                
-                4. **Install the key**:
-                   - Upload the private key file here
-                   - Enter your Tiger ID and private key password
-                   
-                5. **Test the connection**:
-                   - Save the credentials
-                   - Go to the Connection Status tab and test the connection
-                
-                For detailed instructions, refer to the [Tiger Brokers API documentation](https://quant.itigerup.com/openapi/python/en/overview/introduction.html)
-                """)
+            st.subheader("How to Get Tiger Brokers API Credentials")
+            st.markdown("""
+            ### Getting Tiger Brokers API Access
+            
+            1. **Create a Tiger Brokers account** if you don't already have one at [tigerbrokers.com](https://www.tigerbrokers.com)
+            
+            2. **Apply for API access**:
+               - Log in to your Tiger Brokers account
+               - Navigate to Account Settings
+               - Find the API section and apply for API access
+               - This may require verification of your identity
+            
+            3. **Generate API credentials**:
+               - Once approved, you'll be able to generate your Tiger ID
+               - Create a private key (download and save the .pem file)
+               - Create a password to protect your private key
+            
+            4. **Install the key**:
+               - Upload the private key file here
+               - Enter your Tiger ID and private key password
+               
+            5. **Test the connection**:
+               - Save the credentials
+               - Go to the Connection Status tab and test the connection
+            
+            For detailed instructions, refer to the [Tiger Brokers API documentation](https://quant.itigerup.com/openapi/python/en/overview/introduction.html)
+            """)
         
         # Tab 3: Advanced
         with api_tabs[2]:

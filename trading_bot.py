@@ -165,7 +165,7 @@ language=en_US""")
             del self.running_strategies[strategy_id]
             
             # Deactivate in database
-            session = Session(engine)
+            session = Session()
             try:
                 strategy = session.query(Strategy).filter_by(id=strategy_id).first()
                 if strategy:
@@ -289,7 +289,7 @@ language=en_US""")
         if not self.tiger_client:
             return
         
-        session = Session(engine)
+        session = Session()
         try:
             # Get all pending trades
             pending_trades = session.query(Trade).filter_by(status='PENDING').all()

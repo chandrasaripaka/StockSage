@@ -1284,8 +1284,11 @@ with tab2:
                     }.get(trade.status, "gray")
                     
                     # Get strategy name
-                    strategy = logs_session.query(Strategy).filter_by(id=trade.strategy_id).first()
-                    strategy_name = strategy.name if strategy else "Unknown"
+                    strategy_name = "Unknown"
+                    if trade.strategy_id is not None:
+                        strategy = logs_session.query(Strategy).filter_by(id=trade.strategy_id).first()
+                        if strategy:
+                            strategy_name = strategy.name
                     
                     st.markdown(
                         f"<div style='padding: 10px; border-left: 4px solid {status_color};'>"

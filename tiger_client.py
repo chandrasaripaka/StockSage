@@ -39,16 +39,17 @@ class TigerBrokersClient:
             self.logger.error("Private key is None, cannot write to file")
             raise ValueError("Private key is empty or None")
         
-        # The tigeropen library expects the private key file path, not the content
+        # Create properties file with real values substituted
+        props_content = f"""tiger_id={tiger_id}
+private_key=tiger_private_key.pem
+private_key_password={private_key_password}
+language=en_US"""
         
-        # Initialize Tiger Open client config - match the SDK expected parameters
-        # The language parameter might be causing issues - try string value instead of enum
-        self.config = TigerOpenClientConfig(
-            tiger_id=tiger_id,
-            private_key='tiger_private_key.pem',  # Pass the file path
-            private_key_password=private_key_password,
-            language='en_US'  # Use string instead of enum
-        )
+        with open('tiger.properties', 'w') as f:
+            f.write(props_content)
+        
+        # Initialize Tiger Open client config using properties file
+        self.config = TigerOpenClientConfig(props_path='tiger.properties')
         
         # Initialize clients
         self.quote_client = QuoteClient(self.config)
@@ -162,11 +163,13 @@ class TigerBrokersClient:
     
     def close(self):
         """Clean up resources"""
-        # Remove private key file
+        # Remove private key file and properties file
         try:
             os.remove('tiger_private_key.pem')
+            os.remove('tiger.properties')
+            self.logger.info("Cleaned up Tiger Brokers API files")
         except Exception as e:
-            self.logger.warning(f"Error removing private key file: {e}")
+            self.logger.warning(f"Error removing Tiger Brokers API files: {e}")
 
 
 # Example usage (for reference)

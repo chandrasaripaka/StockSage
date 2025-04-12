@@ -562,9 +562,13 @@ class CustomStrategy(BaseStrategy):
 # Registry of available strategies
 STRATEGY_REGISTRY = {
     'moving_average_crossover': MovingAverageCrossover,
+    'MovingAverageCrossover': MovingAverageCrossover,  # Support both naming formats
     'rsi': RSIStrategy,
+    'RSIStrategy': RSIStrategy,  # Support both naming formats
     'macd': MACDStrategy,
-    'custom': CustomStrategy
+    'MACDStrategy': MACDStrategy,  # Support both naming formats
+    'custom': CustomStrategy,
+    'CustomStrategy': CustomStrategy  # Support both naming formats
 }
 
 def get_strategy_class(strategy_type):

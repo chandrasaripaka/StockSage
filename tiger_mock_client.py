@@ -206,12 +206,19 @@ class MockTigerBrokersClient:
             new_quantity = max(0, current_pos.quantity - quantity)
             
             if new_quantity > 0:
+                # Calculate unrealized PL
+                unrealized_pnl = (latest_price - current_pos.avg_price) * new_quantity
+                unrealized_pnl_percent = (unrealized_pnl / (current_pos.avg_price * new_quantity)) * 100 if current_pos.avg_price * new_quantity > 0 else 0
+                
                 # Update position
                 self._positions[symbol] = Position(
                     symbol=symbol,
                     quantity=new_quantity,
                     avg_price=current_pos.avg_price,  # Keep same avg price
-                    market_value=new_quantity * latest_price
+                    market_value=new_quantity * latest_price,
+                    average_cost=current_pos.avg_price,
+                    unrealized_pnl=unrealized_pnl,
+                    unrealized_pnl_percent=unrealized_pnl_percent
                 )
             else:
                 # Remove position if fully sold

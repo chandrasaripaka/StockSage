@@ -28,7 +28,7 @@ class BaseStrategy:
     
     def _create_or_get_strategy(self):
         """Create a new strategy in the database or get existing one"""
-        session = Session()
+        session = Session(bind=engine)
         try:
             # Check if strategy with this name already exists
             existing_strategy = session.query(Strategy).filter_by(name=self.name).first()
@@ -103,7 +103,7 @@ class BaseStrategy:
     
     def record_trade(self, order_id, direction, quantity, price, status='PENDING'):
         """Record a trade in the database"""
-        session = Session()
+        session = Session(bind=engine)
         try:
             trade = Trade(
                 strategy_id=self.strategy_id,
@@ -123,7 +123,7 @@ class BaseStrategy:
     
     def update_trade(self, order_id, status, exit_price=None, exit_timestamp=None):
         """Update an existing trade in the database"""
-        session = Session()
+        session = Session(bind=engine)
         try:
             trade = session.query(Trade).filter_by(order_id=order_id).first()
             if trade:
@@ -153,7 +153,7 @@ class BaseStrategy:
     
     def update_performance_metrics(self, start_date, end_date):
         """Update performance metrics for this strategy"""
-        session = Session()
+        session = Session(bind=engine)
         try:
             # Get all completed trades for this strategy in the date range
             trades = session.query(Trade).filter(

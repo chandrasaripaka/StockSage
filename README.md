@@ -24,24 +24,34 @@ A comprehensive web-based stock analysis and trading platform built with Streaml
    cd <repository-directory>
    ```
 
-2. Run the initialization script to create a template Tiger Brokers key file (if needed):
+2. Create a `.env` file from the template:
+   ```bash
+   cp .env.example .env
+   ```
+   
+3. (Optional) Edit the `.env` file to adjust database settings or Tiger Brokers credentials:
+   ```bash
+   nano .env
+   ```
+
+4. Run the initialization script to create a template Tiger Brokers key file (if needed):
    ```bash
    ./docker-init-keys.sh
    ```
 
-3. Start the application with Docker Compose:
+5. Start the application with Docker Compose:
    ```bash
    docker-compose up -d
    ```
 
-4. Access the web interface at http://localhost:5000
+6. Access the web interface at http://localhost:5000
 
-5. To stop the application:
+7. To stop the application:
    ```bash
    docker-compose down
    ```
 
-6. To view logs:
+8. To view logs:
    ```bash
    docker-compose logs -f
    ```

@@ -1,17 +1,21 @@
 #!/bin/bash
 set -e
 
-# Wait for the database to be ready
+# Run the key initialization script to make sure we have a template key file if needed
+./docker-init-keys.sh
+
+# Wait for PostgreSQL to be ready
 echo "Waiting for PostgreSQL to start..."
 until PGPASSWORD=$POSTGRES_PASSWORD psql -h db -U $POSTGRES_USER -d $POSTGRES_DB -c '\q'; do
   echo "PostgreSQL is unavailable - sleeping"
   sleep 1
 done
+echo "PostgreSQL is up - continuing"
 
-echo "PostgreSQL started"
-
-# Initialize the database if needed
+# Initialize the database with required tables
+echo "Initializing database..."
 python init_db.py
 
 # Start the application
+echo "Starting application..."
 exec streamlit run app.py --server.port 5000

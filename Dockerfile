@@ -7,6 +7,9 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
     postgresql-client \
+    curl \
+    gnupg2 \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
@@ -39,6 +42,10 @@ RUN chmod +x docker-entrypoint.sh
 
 # Expose port
 EXPOSE 5000
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:5000/ || exit 1
 
 # Use the entrypoint script to wait for database and initialize it if needed
 ENTRYPOINT ["./docker-entrypoint.sh"]

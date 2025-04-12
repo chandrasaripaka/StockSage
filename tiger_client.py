@@ -30,14 +30,47 @@ class TigerBrokersClient:
             self.logger.error("Tiger Brokers API credentials not found in environment variables.")
             raise ValueError("Missing Tiger Brokers API credentials. Please set TIGER_ID, TIGER_PRIVATE_KEY, and TIGER_PRIVATE_KEY_PASSWORD environment variables.")
         
-        # Create private key file from environment variable
-        # Ensure private_key is not None before writing to file
+        # Instead of using the environment variable directly, use the existing PEM file
+        # This ensures the key is properly formatted with BEGIN/END tags
+        
+        # Log key contents to debug (without revealing sensitive data)
         if private_key is not None:
-            with open('tiger_private_key.pem', 'w') as f:
-                f.write(private_key)
+            self.logger.info(f"Private key from environment: first 10 chars: {private_key[:10]}...")
+            self.logger.info(f"Private key length: {len(private_key)}")
         else:
-            self.logger.error("Private key is None, cannot write to file")
+            self.logger.error("Private key is None, cannot continue")
             raise ValueError("Private key is empty or None")
+        
+        # Read existing PEM file (already uploaded to project)
+        try:
+            with open('tiger_private_key.pem', 'r') as f:
+                key_content = f.read()
+                self.logger.info(f"Read existing key file, length: {len(key_content)}")
+            
+            # Check if key file starts with BEGIN tag, if not add PEM format
+            if "-----BEGIN RSA PRIVATE KEY-----" not in key_content:
+                formatted_key = "-----BEGIN RSA PRIVATE KEY-----\n"
+                formatted_key += key_content
+                formatted_key += "\n-----END RSA PRIVATE KEY-----"
+                
+                with open('tiger_private_key.pem', 'w') as f:
+                    f.write(formatted_key)
+                self.logger.info("Formatted key with BEGIN/END tags")
+        except Exception as e:
+            self.logger.error(f"Error with key file: {e}")
+            # Fallback to using environment variable directly 
+            try:
+                # Format the private key with proper PEM format
+                formatted_key = "-----BEGIN RSA PRIVATE KEY-----\n"
+                formatted_key += private_key
+                formatted_key += "\n-----END RSA PRIVATE KEY-----"
+                
+                with open('tiger_private_key.pem', 'w') as f:
+                    f.write(formatted_key)
+                self.logger.info("Created new key file with BEGIN/END tags")
+            except Exception as e2:
+                self.logger.error(f"Failed to create key file: {e2}")
+                raise ValueError(f"Could not create private key file: {e2}")
         
         # Create properties file with real values substituted
         props_content = f"""tiger_id={tiger_id}

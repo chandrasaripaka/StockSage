@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 from collections import namedtuple
 
 # Create namedtuples to mimic Tiger API response objects
-Position = namedtuple('Position', ['symbol', 'quantity', 'avg_price', 'market_value'])
+Position = namedtuple('Position', ['symbol', 'quantity', 'avg_price', 'market_value', 'average_cost', 'unrealized_pnl', 'unrealized_pnl_percent'])
 Account = namedtuple('Account', ['account', 'broker_name', 'account_type'])
 OrderStatus = namedtuple('OrderStatus', ['order_id', 'status', 'filled_quantity', 'filled_price'])
-AccountSummary = namedtuple('AccountSummary', ['cash', 'net_liquidation', 'gross_position_value', 'maintenance_margin', 'available_funds'])
+AccountSummary = namedtuple('AccountSummary', ['cash', 'net_liquidation', 'gross_position_value', 'maintenance_margin', 'available_funds', 'buying_power', 'initial_margin_requirement', 'maintenance_margin_requirement'])
 
 class MockTigerBrokersClient:
     """
@@ -25,10 +25,35 @@ class MockTigerBrokersClient:
         self.account_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
         
         # In-memory storage for orders and positions
+        # Create positions with all required fields including the new ones
         self._positions = {
-            'AAPL': Position('AAPL', 10, 180.5, 1805.0),
-            'MSFT': Position('MSFT', 5, 320.25, 1601.25),
-            'GOOG': Position('GOOG', 2, 140.75, 281.5)
+            'AAPL': Position(
+                symbol='AAPL', 
+                quantity=10, 
+                avg_price=180.5, 
+                market_value=1805.0, 
+                average_cost=180.5, 
+                unrealized_pnl=50.0, 
+                unrealized_pnl_percent=2.77
+            ),
+            'MSFT': Position(
+                symbol='MSFT', 
+                quantity=5, 
+                avg_price=320.25, 
+                market_value=1601.25, 
+                average_cost=320.25, 
+                unrealized_pnl=25.0, 
+                unrealized_pnl_percent=1.56
+            ),
+            'GOOG': Position(
+                symbol='GOOG', 
+                quantity=2, 
+                avg_price=140.75, 
+                market_value=281.5, 
+                average_cost=140.75, 
+                unrealized_pnl=10.0, 
+                unrealized_pnl_percent=3.55
+            )
         }
         
         self._orders = {}
@@ -113,12 +138,18 @@ class MockTigerBrokersClient:
         total_value = sum(pos.market_value for pos in self._positions.values())
         cash = 25000.0
         
+        maintenance_margin = total_value * 0.25
+        initial_margin = total_value * 0.5
+        
         return AccountSummary(
             cash=cash,
             net_liquidation=cash + total_value,
             gross_position_value=total_value,
-            maintenance_margin=total_value * 0.25,
-            available_funds=cash - (total_value * 0.25)
+            maintenance_margin=maintenance_margin,
+            available_funds=cash - maintenance_margin,
+            buying_power=(cash - maintenance_margin) * 2,
+            initial_margin_requirement=initial_margin,
+            maintenance_margin_requirement=maintenance_margin
         )
     
     def get_positions(self):
@@ -138,7 +169,15 @@ class MockTigerBrokersClient:
         order_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
         
         # Update positions
-        current_pos = self._positions.get(symbol, Position(symbol, 0, 0, 0))
+        current_pos = self._positions.get(symbol, Position(
+            symbol=symbol, 
+            quantity=0, 
+            avg_price=0, 
+            market_value=0, 
+            average_cost=0, 
+            unrealized_pnl=0, 
+            unrealized_pnl_percent=0
+        ))
         
         # Get latest price for the symbol
         latest_data = self.get_stock_bars(symbol, limit=1)
@@ -149,12 +188,19 @@ class MockTigerBrokersClient:
             new_quantity = current_pos.quantity + quantity
             avg_price = ((current_pos.quantity * current_pos.avg_price) + (quantity * latest_price)) / new_quantity
             
+            # Calculate unrealized PL
+            unrealized_pnl = (latest_price - avg_price) * new_quantity
+            unrealized_pnl_percent = (unrealized_pnl / (avg_price * new_quantity)) * 100 if avg_price * new_quantity > 0 else 0
+            
             # Update position
             self._positions[symbol] = Position(
                 symbol=symbol,
                 quantity=new_quantity,
                 avg_price=avg_price,
-                market_value=new_quantity * latest_price
+                market_value=new_quantity * latest_price,
+                average_cost=avg_price,
+                unrealized_pnl=unrealized_pnl,
+                unrealized_pnl_percent=unrealized_pnl_percent
             )
         elif action == 'SELL':
             new_quantity = max(0, current_pos.quantity - quantity)

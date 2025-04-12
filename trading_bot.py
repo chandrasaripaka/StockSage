@@ -1,10 +1,11 @@
 import os
-import time
 import json
+import time
 import logging
 import threading
 import pytz
 from datetime import datetime, timedelta
+from datetime import time as datetime_time
 import pandas as pd
 from tiger_client import TigerBrokersClient
 from trading_strategies import create_strategy
@@ -34,11 +35,11 @@ class TradingBot:
         self.enable_pre_market = False
         self.enable_after_hours = False
         
-        # Time filters for US market sessions
-        self.pre_market_start = datetime.time(4, 0)  # 4:00 AM ET
-        self.regular_hours_start = datetime.time(9, 30)  # 9:30 AM ET
-        self.regular_hours_end = datetime.time(16, 0)  # 4:00 PM ET
-        self.after_hours_end = datetime.time(20, 0)  # 8:00 PM ET
+        # Time filters for US market sessions (using time class from datetime)
+        self.pre_market_start = datetime_time(4, 0)  # 4:00 AM ET
+        self.regular_hours_start = datetime_time(9, 30)  # 9:30 AM ET
+        self.regular_hours_end = datetime_time(16, 0)  # 4:00 PM ET
+        self.after_hours_end = datetime_time(20, 0)  # 8:00 PM ET
         
     def connect(self):
         """Connect to Tiger Brokers API"""

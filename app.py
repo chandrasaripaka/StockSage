@@ -422,66 +422,355 @@ with tab2:
     with api_config_expander:
         st.markdown("""
         ### Tiger Brokers API Setup
-        To use algorithmic trading features, you need to configure your Tiger Brokers API credentials.
-        These are used to connect to your paper trading account.
+        To use algorithmic trading features with real-time data, you need to configure your 
+        Tiger Brokers API credentials. These are used to connect to your paper trading account.
+        
+        You can get your Tiger API credentials by:
+        1. Creating a Tiger Brokers account
+        2. Applying for API access in the account settings
+        3. Generating your API credentials and private key
         """)
         
-        # Create columns for API inputs
-        col1, col2 = st.columns(2)
+        # Create tabs to organize the content
+        api_tabs = st.tabs(["Connection Status", "Configure API", "Advanced"])
         
-        with col1:
-            # Show current status of API credentials
+        # Tab 1: Connection Status
+        with api_tabs[0]:
+            # Top section - Connection status and summary
+            st.subheader("API Connection Status")
+            
+            # Box with current connection status
+            tiger_demo_mode = os.environ.get('USE_MOCK_TIGER', 'true').lower() == 'true'
+            
+            # Get current client type
+            if tiger_demo_mode:
+                conn_status = "🟡 Demo Mode (Using Simulated Paper Trading)"
+                status_color = "orange"
+            elif trading_bot and trading_bot.tiger_client:
+                conn_status = "🟢 Connected (Using Real Paper Trading Account)"
+                status_color = "green"
+            else:
+                conn_status = "🔴 Disconnected (Not Configured)"
+                status_color = "red"
+            
+            st.markdown(f"<div style='background-color: {status_color}15; padding: 15px; border-radius: 5px; border: 1px solid {status_color};'><b>Status: {conn_status}</b></div>", unsafe_allow_html=True)
+            
+            # Test connection button (only if not in demo mode)
+            if not tiger_demo_mode and os.environ.get('TIGER_ID') and os.environ.get('TIGER_PRIVATE_KEY_PASSWORD'):
+                if st.button("Test Connection", key="test_tiger_conn"):
+                    with st.spinner("Testing connection to Tiger Brokers API..."):
+                        try:
+                            import tiger_api_test
+                            success, results = tiger_api_test.test_connection()
+                            
+                            if success:
+                                st.success("✅ Successfully connected to Tiger Brokers API!")
+                                
+                                # Show summary of account
+                                st.subheader("Account Summary")
+                                st.markdown("\n".join([f"- {result}" for result in results[:3]]))
+                                
+                                # Show positions if any
+                                if len(results) > 3:
+                                    with st.expander("Current Positions"):
+                                        st.markdown("\n".join([f"- {result}" for result in results[3:]]))
+                            else:
+                                st.error(f"❌ Connection failed: {results[0]}")
+                        except Exception as e:
+                            st.error(f"❌ Error testing connection: {str(e)}")
+            
+            # Credentials Status
             st.subheader("API Credentials Status")
             
-            tiger_id_status = "✅ Configured" if os.environ.get('TIGER_ID') else "❌ Not Configured"
-            st.markdown(f"**Tiger ID:** {tiger_id_status}")
+            # Create a grid with status indicators
+            cred_col1, cred_col2 = st.columns(2)
             
-            tiger_key_status = "✅ Configured" if os.environ.get('TIGER_PRIVATE_KEY') and len(os.environ.get('TIGER_PRIVATE_KEY', '')) > 10 else "❌ Not Configured"
-            st.markdown(f"**Private Key:** {tiger_key_status}")
+            with cred_col1:
+                tiger_id_status = "✅ Configured" if os.environ.get('TIGER_ID') else "❌ Not Configured"
+                st.markdown(f"**Tiger ID:** {tiger_id_status}")
+                
+                tiger_key_status = "✅ Configured" if os.path.exists('tiger_private_key.pem') and os.path.getsize('tiger_private_key.pem') > 10 else "❌ Not Configured"
+                st.markdown(f"**Private Key File:** {tiger_key_status}")
             
-            tiger_pwd_status = "✅ Configured" if os.environ.get('TIGER_PRIVATE_KEY_PASSWORD') else "❌ Not Configured"
-            st.markdown(f"**Private Key Password:** {tiger_pwd_status}")
+            with cred_col2:
+                tiger_pwd_status = "✅ Configured" if os.environ.get('TIGER_PRIVATE_KEY_PASSWORD') else "❌ Not Configured"
+                st.markdown(f"**Private Key Password:** {tiger_pwd_status}")
+                
+                tiger_props_status = "✅ Configured" if os.path.exists('tiger.properties') else "❌ Not Generated"
+                st.markdown(f"**Properties File:** {tiger_props_status}")
             
-            # Use mock client option
-            st.subheader("Demo Mode")
-            use_mock = st.checkbox("Use demo mode (simulated trading)", value=os.environ.get('USE_MOCK_TIGER', 'true').lower() == 'true')
+            # Demo Mode Toggle (prominently displayed)
+            st.markdown("---")
+            st.subheader("Trading Mode")
+            
+            use_mock = st.toggle(
+                "Use Demo Mode (Simulated Paper Trading)", 
+                value=os.environ.get('USE_MOCK_TIGER', 'true').lower() == 'true',
+                help="Enable this to use simulated paper trading without real API credentials."
+            )
+            
             if use_mock:
-                st.info("Using simulated paper trading. No real API credentials required.")
+                st.info("📝 **Demo Mode Enabled**: Using simulated trading with mock data. No real API credentials required.")
                 # Set environment variable for mock client
                 os.environ['USE_MOCK_TIGER'] = 'true'
             else:
+                st.warning("🔑 **Real Trading Mode**: You must configure valid Tiger Brokers API credentials to use this mode.")
+                # Set environment variable for real client
                 os.environ['USE_MOCK_TIGER'] = 'false'
-                
-        with col2:
+        
+        # Tab 2: Configure API
+        with api_tabs[1]:
             st.subheader("Configure API Credentials")
             
-            # Tiger ID input
-            tiger_id = st.text_input("Tiger ID", value=os.environ.get('TIGER_ID', ''), type="default")
+            # Create a form to collect all credentials together
+            with st.form("tiger_api_credentials_form"):
+                # Tiger ID input with validation
+                tiger_id = st.text_input(
+                    "Tiger ID", 
+                    value=os.environ.get('TIGER_ID', ''),
+                    help="Your Tiger Brokers API ID (not your account username)",
+                    placeholder="Enter your Tiger ID",
+                    type="default"
+                )
+                
+                # Private Key Password input (with password masking)
+                tiger_pwd = st.text_input(
+                    "Private Key Password", 
+                    value=os.environ.get('TIGER_PRIVATE_KEY_PASSWORD', ''),
+                    help="Password used to encrypt your private key",
+                    placeholder="Enter your private key password",
+                    type="password"
+                )
+                
+                # Private Key file upload with clear instructions
+                st.markdown("""
+                **Private Key File (PEM format)**
+                Upload the private key file provided by Tiger Brokers. This should be a .pem file containing your RSA private key.
+                """)
+                
+                uploaded_file = st.file_uploader(
+                    "Upload your private key file", 
+                    type=['pem', 'txt', 'key'],
+                    help="Select your Tiger Brokers private key file in PEM format"
+                )
+                
+                # Submit button with better labeling
+                submit_button = st.form_submit_button("Save & Apply Credentials")
+                
+                if submit_button:
+                    credential_changes = []
+                    
+                    # Save Tiger ID
+                    if tiger_id:
+                        os.environ['TIGER_ID'] = tiger_id
+                        credential_changes.append("Tiger ID")
+                    
+                    # Save password
+                    if tiger_pwd:
+                        os.environ['TIGER_PRIVATE_KEY_PASSWORD'] = tiger_pwd
+                        credential_changes.append("Private Key Password")
+                    
+                    # Handle private key file
+                    if uploaded_file is not None:
+                        private_key = uploaded_file.getvalue().decode('utf-8')
+                        
+                        # Ensure it has proper PEM formatting
+                        if "-----BEGIN RSA PRIVATE KEY-----" not in private_key:
+                            formatted_key = "-----BEGIN RSA PRIVATE KEY-----\n"
+                            formatted_key += private_key.strip()
+                            formatted_key += "\n-----END RSA PRIVATE KEY-----"
+                            private_key = formatted_key
+                        
+                        # Save to file
+                        with open('tiger_private_key.pem', 'w') as f:
+                            f.write(private_key)
+                        credential_changes.append("Private Key File")
+                    
+                    # Show success message
+                    if credential_changes:
+                        st.success(f"Credentials updated: {', '.join(credential_changes)}")
+                        
+                        # Create properties file
+                        if os.environ.get('TIGER_ID') and os.environ.get('TIGER_PRIVATE_KEY_PASSWORD'):
+                            try:
+                                with open('tiger.properties', 'w') as f:
+                                    f.write(f"""tiger_id={os.environ.get('TIGER_ID')}
+private_key=tiger_private_key.pem
+private_key_password={os.environ.get('TIGER_PRIVATE_KEY_PASSWORD')}
+language=en_US""")
+                                st.info("Configuration files generated successfully")
+                            except Exception as e:
+                                st.warning(f"Error generating config files: {str(e)}")
+                        
+                        # Refresh the page to apply changes
+                        st.rerun()
+                    else:
+                        st.info("No credential changes detected")
             
-            # Private Key Password input
-            tiger_pwd = st.text_input("Private Key Password", value=os.environ.get('TIGER_PRIVATE_KEY_PASSWORD', ''), type="password")
+            # Instructions for getting credentials
+            with st.expander("Where to get Tiger Brokers API credentials"):
+                st.markdown("""
+                ### Getting Tiger Brokers API Access
+                
+                1. **Create a Tiger Brokers account** if you don't already have one at [tigerbrokers.com](https://www.tigerbrokers.com)
+                
+                2. **Apply for API access**:
+                   - Log in to your Tiger Brokers account
+                   - Navigate to Account Settings
+                   - Find the API section and apply for API access
+                   - This may require verification of your identity
+                
+                3. **Generate API credentials**:
+                   - Once approved, you'll be able to generate your Tiger ID
+                   - Create a private key (download and save the .pem file)
+                   - Create a password to protect your private key
+                
+                4. **Install the key**:
+                   - Upload the private key file here
+                   - Enter your Tiger ID and private key password
+                   
+                5. **Test the connection**:
+                   - Save the credentials
+                   - Go to the Connection Status tab and test the connection
+                
+                For detailed instructions, refer to the [Tiger Brokers API documentation](https://quant.itigerup.com/openapi/python/en/overview/introduction.html)
+                """)
+        
+        # Tab 3: Advanced
+        with api_tabs[2]:
+            st.subheader("Advanced Options")
             
-            # Private Key file upload (PEM format)
-            st.markdown("**Private Key File (PEM format)**")
-            uploaded_file = st.file_uploader("Upload your private key file", type=['pem', 'txt'])
+            # Private Key Management
+            with st.expander("Private Key Management"):
+                st.markdown("View or modify the current private key content")
+                
+                # Show current key path and size
+                if os.path.exists('tiger_private_key.pem'):
+                    key_size = os.path.getsize('tiger_private_key.pem')
+                    st.info(f"Private key file exists: tiger_private_key.pem ({key_size} bytes)")
+                    
+                    # Option to view key content (with warning)
+                    if st.checkbox("Show private key content (not recommended)", key="show_key"):
+                        try:
+                            with open('tiger_private_key.pem', 'r') as f:
+                                key_content = f.read()
+                            st.text_area("Private Key Content", value=key_content, height=200)
+                        except Exception as e:
+                            st.error(f"Error reading key file: {str(e)}")
+                else:
+                    st.warning("No private key file found")
+                
+                # Option to delete key
+                if st.button("Delete Private Key File", key="delete_key"):
+                    try:
+                        if os.path.exists('tiger_private_key.pem'):
+                            os.remove('tiger_private_key.pem')
+                            st.success("Private key file deleted")
+                        else:
+                            st.info("No private key file to delete")
+                    except Exception as e:
+                        st.error(f"Error deleting key file: {str(e)}")
             
-            if uploaded_file is not None:
-                private_key = uploaded_file.getvalue().decode('utf-8')
-                # Save to environment variable
-                os.environ['TIGER_PRIVATE_KEY'] = private_key
-                # Also save to file
-                with open('tiger_private_key.pem', 'w') as f:
-                    f.write(private_key)
-                st.success("Private key file uploaded successfully!")
+            # Properties File Management
+            with st.expander("Properties File Management"):
+                st.markdown("View or modify the Tiger properties file")
+                
+                # Show current properties
+                if os.path.exists('tiger.properties'):
+                    st.info("Tiger properties file exists")
+                    
+                    # Option to view properties
+                    if st.checkbox("Show properties content", key="show_props"):
+                        try:
+                            with open('tiger.properties', 'r') as f:
+                                props_content = f.read()
+                            
+                            # Mask password for security
+                            masked_content = props_content.replace(os.environ.get('TIGER_PRIVATE_KEY_PASSWORD', ''), '*' * 8)
+                            st.text_area("Properties Content", value=masked_content, height=150)
+                        except Exception as e:
+                            st.error(f"Error reading properties file: {str(e)}")
+                else:
+                    st.warning("No properties file found")
+                
+                # Option to regenerate properties file
+                if st.button("Regenerate Properties File", key="regen_props"):
+                    try:
+                        if os.environ.get('TIGER_ID') and os.environ.get('TIGER_PRIVATE_KEY_PASSWORD'):
+                            with open('tiger.properties', 'w') as f:
+                                f.write(f"""tiger_id={os.environ.get('TIGER_ID')}
+private_key=tiger_private_key.pem
+private_key_password={os.environ.get('TIGER_PRIVATE_KEY_PASSWORD')}
+language=en_US""")
+                            st.success("Properties file regenerated")
+                        else:
+                            st.error("Missing required credentials (Tiger ID or password)")
+                    except Exception as e:
+                        st.error(f"Error regenerating properties file: {str(e)}")
             
-            # Save button for Tiger ID and password
-            if st.button("Save Credentials"):
-                if tiger_id:
-                    os.environ['TIGER_ID'] = tiger_id
-                if tiger_pwd:
-                    os.environ['TIGER_PRIVATE_KEY_PASSWORD'] = tiger_pwd
-                st.success("Credentials saved!")
-                st.rerun()
+            # Connection Settings
+            with st.expander("Connection Settings"):
+                st.markdown("Additional connection settings for Tiger Brokers API")
+                
+                # API timeout
+                api_timeout = st.slider(
+                    "API Timeout (seconds)", 
+                    min_value=10, 
+                    max_value=120, 
+                    value=30, 
+                    step=5,
+                    help="Maximum time to wait for API responses"
+                )
+                
+                # Option to disable SSL verification (for development only)
+                disable_ssl = st.checkbox(
+                    "Disable SSL Verification (Development Only)", 
+                    value=False,
+                    help="Warning: Only use this option if you're having certificate issues during development"
+                )
+                
+                # Save settings button
+                if st.button("Save Connection Settings", key="save_conn_settings"):
+                    st.session_state['tiger_api_timeout'] = api_timeout
+                    st.session_state['tiger_disable_ssl'] = disable_ssl
+                    st.success("Connection settings saved")
+                    
+            # Reset All Settings
+            with st.expander("Reset All Settings", expanded=False):
+                st.markdown("⚠️ **Danger Zone**: Reset all Tiger Brokers API settings and credentials")
+                
+                # Confirmation for reset
+                reset_confirm = st.text_input(
+                    "Type 'RESET' to confirm clearing all Tiger Brokers API settings",
+                    key="reset_confirm"
+                )
+                
+                if st.button("Reset All Settings", key="reset_all") and reset_confirm == "RESET":
+                    try:
+                        # Clear environment variables
+                        if 'TIGER_ID' in os.environ:
+                            del os.environ['TIGER_ID']
+                        if 'TIGER_PRIVATE_KEY_PASSWORD' in os.environ:
+                            del os.environ['TIGER_PRIVATE_KEY_PASSWORD']
+                        if 'TIGER_PRIVATE_KEY' in os.environ:
+                            del os.environ['TIGER_PRIVATE_KEY']
+                        
+                        # Reset to demo mode
+                        os.environ['USE_MOCK_TIGER'] = 'true'
+                        
+                        # Delete files
+                        if os.path.exists('tiger_private_key.pem'):
+                            os.remove('tiger_private_key.pem')
+                        if os.path.exists('tiger.properties'):
+                            os.remove('tiger.properties')
+                        
+                        st.success("All Tiger Brokers API settings have been reset!")
+                        st.info("Demo mode has been enabled. Refreshing page...")
+                        
+                        # Refresh the page
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error resetting settings: {str(e)}")
     
     # Check for API credentials or mock mode
     tiger_credentials = use_mock or all([

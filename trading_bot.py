@@ -112,7 +112,7 @@ language=en_US""")
     
     def load_strategies_from_db(self):
         """Load active strategies from the database"""
-        session = Session()
+        session = Session(bind=engine)
         try:
             strategies = session.query(Strategy).filter_by(is_active=True).all()
             
@@ -165,7 +165,7 @@ language=en_US""")
             del self.running_strategies[strategy_id]
             
             # Deactivate in database
-            session = Session()
+            session = Session(bind=engine)
             try:
                 strategy = session.query(Strategy).filter_by(id=strategy_id).first()
                 if strategy:
@@ -289,7 +289,7 @@ language=en_US""")
         if not self.tiger_client:
             return
         
-        session = Session()
+        session = Session(bind=engine)
         try:
             # Get all pending trades
             pending_trades = session.query(Trade).filter_by(status='PENDING').all()

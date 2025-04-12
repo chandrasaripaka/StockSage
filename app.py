@@ -500,7 +500,7 @@ with tab2:
                 st.rerun()
         
         # Trading interface tabs
-        algo_tabs = st.tabs(["Strategies", "Account", "Performance", "Logs"])
+        algo_tabs = st.tabs(["Strategies", "Account", "Trades", "Performance", "Logs"])
         
         # Strategies tab
         with algo_tabs[0]:

@@ -227,6 +227,9 @@ language=en_US""")
             # Only act on recent signals
             if isinstance(signal_time, pd.Timestamp):
                 signal_time = signal_time.to_pydatetime()
+                # Make sure to convert timezone-aware timestamps to naive timestamps
+                if signal_time.tzinfo is not None:
+                    signal_time = signal_time.replace(tzinfo=None)
             
             time_diff = (now - signal_time).total_seconds()
             

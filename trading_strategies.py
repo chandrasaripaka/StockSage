@@ -363,11 +363,208 @@ class MACDStrategy(BaseStrategy):
         return df
 
 
+class CustomStrategy(BaseStrategy):
+    """
+    Custom Trading Strategy
+    
+    A flexible strategy that allows users to combine multiple indicators and set
+    custom rules for generating buy and sell signals.
+    """
+    
+    def __init__(self, name, symbol, timeframe, indicators=None, buy_conditions=None, sell_conditions=None, **kwargs):
+        parameters = {
+            'indicators': indicators or [],
+            'buy_conditions': buy_conditions or [],
+            'sell_conditions': sell_conditions or []
+        }
+        super().__init__(name, symbol, timeframe, parameters, **kwargs)
+    
+    def analyze(self, data):
+        """Implement the custom strategy based on user-defined rules"""
+        df = data.copy()
+        
+        # Extract parameters
+        indicators = self.parameters.get('indicators', [])
+        buy_conditions = self.parameters.get('buy_conditions', [])
+        sell_conditions = self.parameters.get('sell_conditions', [])
+        
+        # Calculate all requested indicators
+        for indicator in indicators:
+            indicator_type = indicator.get('type')
+            
+            if indicator_type == 'sma':
+                period = indicator.get('period', 20)
+                df[f'sma_{period}'] = df['close'].rolling(window=period).mean()
+                
+            elif indicator_type == 'ema':
+                period = indicator.get('period', 20)
+                df[f'ema_{period}'] = df['close'].ewm(span=period, adjust=False).mean()
+                
+            elif indicator_type == 'rsi':
+                period = indicator.get('period', 14)
+                delta = df['close'].diff()
+                gain = delta.where(delta > 0, 0)
+                loss = -delta.where(delta < 0, 0)
+                avg_gain = gain.rolling(window=period).mean()
+                avg_loss = loss.rolling(window=period).mean()
+                rs = avg_gain / avg_loss
+                df['rsi'] = 100 - (100 / (1 + rs))
+                
+            elif indicator_type == 'macd':
+                fast_period = indicator.get('fast_period', 12)
+                slow_period = indicator.get('slow_period', 26)
+                signal_period = indicator.get('signal_period', 9)
+                
+                ema_fast = df['close'].ewm(span=fast_period, adjust=False).mean()
+                ema_slow = df['close'].ewm(span=slow_period, adjust=False).mean()
+                df['macd'] = ema_fast - ema_slow
+                df['macd_signal'] = df['macd'].ewm(span=signal_period, adjust=False).mean()
+                df['macd_hist'] = df['macd'] - df['macd_signal']
+                
+            elif indicator_type == 'bollinger_bands':
+                period = indicator.get('period', 20)
+                std_dev = indicator.get('std_dev', 2)
+                
+                df['bb_middle'] = df['close'].rolling(window=period).mean()
+                price_std = df['close'].rolling(window=period).std()
+                df['bb_upper'] = df['bb_middle'] + (price_std * std_dev)
+                df['bb_lower'] = df['bb_middle'] - (price_std * std_dev)
+                
+            elif indicator_type == 'price_channel':
+                period = indicator.get('period', 20)
+                df['pc_high'] = df['high'].rolling(window=period).max()
+                df['pc_low'] = df['low'].rolling(window=period).min()
+                df['pc_middle'] = (df['pc_high'] + df['pc_low']) / 2
+                
+        # Initialize signal column
+        df['signal'] = 0
+        
+        # Evaluate buy conditions
+        buy_signals = pd.Series(False, index=df.index)
+        for condition in buy_conditions:
+            indicator1 = condition.get('indicator1', '')
+            indicator2 = condition.get('indicator2', '')
+            operator = condition.get('operator', '>')
+            
+            # Skip invalid conditions
+            if not indicator1 or not indicator2:
+                continue
+                
+            # Check if indicators exist in the dataframe
+            if indicator1 not in df.columns and indicator1 != 'price':
+                continue
+            if indicator2 not in df.columns and not indicator2.replace('.', '').isdigit() and indicator2 != 'price':
+                continue
+                
+            # Convert price references to actual price column
+            indicator1_values = df['close'] if indicator1 == 'price' else df[indicator1]
+            
+            # Handle numeric values or other indicator
+            if indicator2.replace('.', '').isdigit():
+                indicator2_values = float(indicator2)
+            elif indicator2 == 'price':
+                indicator2_values = df['close']
+            else:
+                indicator2_values = df[indicator2]
+            
+            # Apply the operator
+            if operator == '>':
+                current_condition = indicator1_values > indicator2_values
+            elif operator == '<':
+                current_condition = indicator1_values < indicator2_values
+            elif operator == '=':
+                current_condition = indicator1_values == indicator2_values
+            elif operator == 'crosses_above':
+                # Need previous values
+                prev_indicator1 = indicator1_values.shift(1)
+                if isinstance(indicator2_values, pd.Series):
+                    prev_indicator2 = indicator2_values.shift(1)
+                    current_condition = (prev_indicator1 <= prev_indicator2) & (indicator1_values > indicator2_values)
+                else:
+                    current_condition = (prev_indicator1 <= indicator2_values) & (indicator1_values > indicator2_values)
+            elif operator == 'crosses_below':
+                # Need previous values
+                prev_indicator1 = indicator1_values.shift(1)
+                if isinstance(indicator2_values, pd.Series):
+                    prev_indicator2 = indicator2_values.shift(1)
+                    current_condition = (prev_indicator1 >= prev_indicator2) & (indicator1_values < indicator2_values)
+                else:
+                    current_condition = (prev_indicator1 >= indicator2_values) & (indicator1_values < indicator2_values)
+            
+            # Combine conditions with AND logic
+            buy_signals = buy_signals | current_condition
+        
+        # Evaluate sell conditions
+        sell_signals = pd.Series(False, index=df.index)
+        for condition in sell_conditions:
+            indicator1 = condition.get('indicator1', '')
+            indicator2 = condition.get('indicator2', '')
+            operator = condition.get('operator', '>')
+            
+            # Skip invalid conditions
+            if not indicator1 or not indicator2:
+                continue
+                
+            # Check if indicators exist in the dataframe
+            if indicator1 not in df.columns and indicator1 != 'price':
+                continue
+            if indicator2 not in df.columns and not indicator2.replace('.', '').isdigit() and indicator2 != 'price':
+                continue
+                
+            # Convert price references to actual price column
+            indicator1_values = df['close'] if indicator1 == 'price' else df[indicator1]
+            
+            # Handle numeric values or other indicator
+            if indicator2.replace('.', '').isdigit():
+                indicator2_values = float(indicator2)
+            elif indicator2 == 'price':
+                indicator2_values = df['close']
+            else:
+                indicator2_values = df[indicator2]
+            
+            # Apply the operator
+            if operator == '>':
+                current_condition = indicator1_values > indicator2_values
+            elif operator == '<':
+                current_condition = indicator1_values < indicator2_values
+            elif operator == '=':
+                current_condition = indicator1_values == indicator2_values
+            elif operator == 'crosses_above':
+                # Need previous values
+                prev_indicator1 = indicator1_values.shift(1)
+                if isinstance(indicator2_values, pd.Series):
+                    prev_indicator2 = indicator2_values.shift(1)
+                    current_condition = (prev_indicator1 <= prev_indicator2) & (indicator1_values > indicator2_values)
+                else:
+                    current_condition = (prev_indicator1 <= indicator2_values) & (indicator1_values > indicator2_values)
+            elif operator == 'crosses_below':
+                # Need previous values
+                prev_indicator1 = indicator1_values.shift(1)
+                if isinstance(indicator2_values, pd.Series):
+                    prev_indicator2 = indicator2_values.shift(1)
+                    current_condition = (prev_indicator1 >= prev_indicator2) & (indicator1_values < indicator2_values)
+                else:
+                    current_condition = (prev_indicator1 >= indicator2_values) & (indicator1_values < indicator2_values)
+            
+            # Combine conditions with AND logic
+            sell_signals = sell_signals | current_condition
+            
+        # Apply buy and sell signals
+        df.loc[buy_signals, 'signal'] = 1
+        df.loc[sell_signals, 'signal'] = -1
+        
+        # Avoid conflicting signals (prioritize sell signals)
+        df.loc[(buy_signals & sell_signals), 'signal'] = -1
+        
+        return df
+
+
 # Registry of available strategies
 STRATEGY_REGISTRY = {
     'moving_average_crossover': MovingAverageCrossover,
     'rsi': RSIStrategy,
-    'macd': MACDStrategy
+    'macd': MACDStrategy,
+    'custom': CustomStrategy
 }
 
 def get_strategy_class(strategy_type):

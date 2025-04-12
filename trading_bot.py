@@ -9,7 +9,7 @@ from datetime import time as datetime_time
 import pandas as pd
 from tiger_client import TigerBrokersClient
 from trading_strategies import create_strategy
-from db_models import Session, Strategy, Trade, PerformanceMetric, engine, init_db
+from db_models import Session, Strategy, Trade, PerformanceMetric, engine, init_db, db_session
 from sqlalchemy import desc
 
 # Initialize database
@@ -121,8 +121,7 @@ language=en_US""")
     
     def load_strategies_from_db(self):
         """Load active strategies from the database"""
-        session = Session(bind=engine)
-        try:
+        with db_session() as session:
             strategies = session.query(Strategy).filter_by(is_active=True).all()
             
             for strategy_db in strategies:
@@ -147,8 +146,6 @@ language=en_US""")
                 self.logger.info(f"Loaded strategy: {strategy_db.name} (ID: {strategy_db.id})")
             
             return len(strategies)
-        finally:
-            session.close()
     
     def add_strategy(self, strategy_type, name, symbol, timeframe, **parameters):
         """Add a new trading strategy"""
@@ -174,16 +171,12 @@ language=en_US""")
             del self.running_strategies[strategy_id]
             
             # Deactivate in database
-            session = Session(bind=engine)
-            try:
+            with db_session() as session:
                 strategy = session.query(Strategy).filter_by(id=strategy_id).first()
                 if strategy:
                     strategy.is_active = False
-                    session.commit()
                     self.logger.info(f"Deactivated strategy: {strategy.name} (ID: {strategy_id})")
                     return True
-            finally:
-                session.close()
         
         return False
     
@@ -301,8 +294,7 @@ language=en_US""")
         if not self.tiger_client:
             return
         
-        session = Session(bind=engine)
-        try:
+        with db_session() as session:
             # Get all pending trades
             pending_trades = session.query(Trade).filter_by(status='PENDING').all()
             
@@ -329,9 +321,6 @@ language=en_US""")
                 
                 except Exception as e:
                     self.logger.error(f"Error updating trade {trade.order_id}: {str(e)}")
-        
-        finally:
-            session.close()
             
     def configure_sessions(self, regular_hours=True, pre_market=False, after_hours=False):
         """

@@ -514,6 +514,289 @@ with tab2:
                     params["fast_period"] = st.number_input("Fast EMA Period", value=12, min_value=1)
                     params["slow_period"] = st.number_input("Slow EMA Period", value=26, min_value=1)
                     params["signal_period"] = st.number_input("Signal Period", value=9, min_value=1)
+                
+                elif strategy_type == "custom":
+                    # Custom strategy builder
+                    st.write("This is the custom strategy builder where you can combine multiple indicators and conditions.")
+                    
+                    # Custom strategy interface in tabs
+                    builder_tabs = st.tabs(["Indicators", "Buy Conditions", "Sell Conditions"])
+                    
+                    # Indicators selection
+                    with builder_tabs[0]:
+                        st.subheader("Select Technical Indicators")
+                        
+                        # Initialize indicators list
+                        if 'strategy_indicators' not in st.session_state:
+                            st.session_state.strategy_indicators = []
+                        
+                        # Add indicator form
+                        indicator_type = st.selectbox(
+                            "Indicator Type",
+                            options=["SMA", "EMA", "RSI", "MACD", "Bollinger Bands", "Price Channel"],
+                            key="indicator_type"
+                        )
+                        
+                        # Dynamic parameters based on indicator type
+                        indicator_params = {}
+                        
+                        if indicator_type == "SMA":
+                            period = st.number_input("Period", value=20, min_value=1, key="sma_period")
+                            indicator_params = {"type": "sma", "period": int(period)}
+                            display_name = f"SMA ({period})"
+                        
+                        elif indicator_type == "EMA":
+                            period = st.number_input("Period", value=20, min_value=1, key="ema_period")
+                            indicator_params = {"type": "ema", "period": int(period)}
+                            display_name = f"EMA ({period})"
+                        
+                        elif indicator_type == "RSI":
+                            period = st.number_input("Period", value=14, min_value=1, key="rsi_period")
+                            indicator_params = {"type": "rsi", "period": int(period)}
+                            display_name = f"RSI ({period})"
+                        
+                        elif indicator_type == "MACD":
+                            fast = st.number_input("Fast Period", value=12, min_value=1, key="macd_fast")
+                            slow = st.number_input("Slow Period", value=26, min_value=1, key="macd_slow")
+                            signal = st.number_input("Signal Period", value=9, min_value=1, key="macd_signal")
+                            indicator_params = {
+                                "type": "macd", 
+                                "fast_period": int(fast), 
+                                "slow_period": int(slow),
+                                "signal_period": int(signal)
+                            }
+                            display_name = f"MACD ({fast}, {slow}, {signal})"
+                        
+                        elif indicator_type == "Bollinger Bands":
+                            period = st.number_input("Period", value=20, min_value=1, key="bb_period")
+                            std_dev = st.number_input("Standard Deviations", value=2.0, min_value=0.1, key="bb_std")
+                            indicator_params = {"type": "bollinger_bands", "period": int(period), "std_dev": float(std_dev)}
+                            display_name = f"Bollinger Bands ({period}, {std_dev})"
+                        
+                        elif indicator_type == "Price Channel":
+                            period = st.number_input("Period", value=20, min_value=1, key="pc_period")
+                            indicator_params = {"type": "price_channel", "period": int(period)}
+                            display_name = f"Price Channel ({period})"
+                        
+                        # Button to add indicator
+                        if st.button("Add Indicator"):
+                            indicator_params["display_name"] = display_name
+                            st.session_state.strategy_indicators.append(indicator_params)
+                            st.success(f"Added {display_name} to strategy")
+                        
+                        # Display selected indicators
+                        if st.session_state.strategy_indicators:
+                            st.subheader("Selected Indicators")
+                            for i, indicator in enumerate(st.session_state.strategy_indicators):
+                                col1, col2 = st.columns([3, 1])
+                                with col1:
+                                    st.write(f"{i+1}. {indicator['display_name']}")
+                                with col2:
+                                    if st.button("Remove", key=f"remove_indicator_{i}"):
+                                        st.session_state.strategy_indicators.pop(i)
+                                        st.rerun()
+                        else:
+                            st.info("No indicators added yet. Add at least one indicator.")
+                    
+                    # Buy conditions setup
+                    with builder_tabs[1]:
+                        st.subheader("Define Buy Conditions")
+                        
+                        # Initialize buy conditions list
+                        if 'strategy_buy_conditions' not in st.session_state:
+                            st.session_state.strategy_buy_conditions = []
+                        
+                        # Only allow adding conditions if we have indicators
+                        if not st.session_state.strategy_indicators:
+                            st.warning("Please add indicators first in the Indicators tab")
+                        else:
+                            # Get all available indicators
+                            available_indicators = []
+                            for indicator in st.session_state.strategy_indicators:
+                                ind_type = indicator["type"]
+                                
+                                if ind_type == "sma":
+                                    available_indicators.append(f"sma_{indicator['period']}")
+                                elif ind_type == "ema":
+                                    available_indicators.append(f"ema_{indicator['period']}")
+                                elif ind_type == "rsi":
+                                    available_indicators.append("rsi")
+                                elif ind_type == "macd":
+                                    available_indicators.extend(["macd", "macd_signal", "macd_hist"])
+                                elif ind_type == "bollinger_bands":
+                                    available_indicators.extend(["bb_upper", "bb_middle", "bb_lower"])
+                                elif ind_type == "price_channel":
+                                    available_indicators.extend(["pc_high", "pc_middle", "pc_low"])
+                            
+                            # Add price as an option
+                            available_indicators = ["price"] + available_indicators
+                            
+                            # Buy condition form
+                            st.write("When:")
+                            indicator1 = st.selectbox("", options=available_indicators, key="buy_indicator1")
+                            
+                            operator = st.selectbox("", 
+                                options=[">", "<", "=", "crosses above", "crosses below"],
+                                format_func=lambda x: x.replace("crosses above", "crosses above").replace("crosses below", "crosses below"),
+                                key="buy_operator"
+                            )
+                            
+                            # For the second indicator, also allow numerical values
+                            indicator2_type = st.radio("Compare with:", ["Indicator", "Value"], key="buy_indicator2_type")
+                            
+                            if indicator2_type == "Indicator":
+                                indicator2 = st.selectbox("", options=available_indicators, key="buy_indicator2")
+                            else:  # Value
+                                indicator2 = st.number_input("Value", key="buy_value")
+                            
+                            # Translate UI operator to internal operator
+                            op_map = {
+                                ">": ">",
+                                "<": "<",
+                                "=": "=",
+                                "crosses above": "crosses_above",
+                                "crosses below": "crosses_below"
+                            }
+                            
+                            # Button to add condition
+                            if st.button("Add Buy Condition"):
+                                condition = {
+                                    "indicator1": indicator1,
+                                    "operator": op_map[operator],
+                                    "indicator2": str(indicator2)
+                                }
+                                
+                                # Format for display
+                                if indicator2_type == "Value":
+                                    display_condition = f"{indicator1} {operator} {indicator2}"
+                                else:
+                                    display_condition = f"{indicator1} {operator} {indicator2}"
+                                
+                                condition["display"] = display_condition
+                                st.session_state.strategy_buy_conditions.append(condition)
+                                st.success(f"Added buy condition: {display_condition}")
+                                
+                            # Display added conditions
+                            if st.session_state.strategy_buy_conditions:
+                                st.subheader("Defined Buy Conditions")
+                                for i, condition in enumerate(st.session_state.strategy_buy_conditions):
+                                    col1, col2 = st.columns([3, 1])
+                                    with col1:
+                                        st.write(f"{i+1}. {condition['display']}")
+                                    with col2:
+                                        if st.button("Remove", key=f"remove_buy_condition_{i}"):
+                                            st.session_state.strategy_buy_conditions.pop(i)
+                                            st.rerun()
+                            else:
+                                st.info("No buy conditions added yet.")
+                    
+                    # Sell conditions setup
+                    with builder_tabs[2]:
+                        st.subheader("Define Sell Conditions")
+                        
+                        # Initialize sell conditions list
+                        if 'strategy_sell_conditions' not in st.session_state:
+                            st.session_state.strategy_sell_conditions = []
+                        
+                        # Only allow adding conditions if we have indicators
+                        if not st.session_state.strategy_indicators:
+                            st.warning("Please add indicators first in the Indicators tab")
+                        else:
+                            # Get all available indicators (same as buy conditions)
+                            available_indicators = []
+                            for indicator in st.session_state.strategy_indicators:
+                                ind_type = indicator["type"]
+                                
+                                if ind_type == "sma":
+                                    available_indicators.append(f"sma_{indicator['period']}")
+                                elif ind_type == "ema":
+                                    available_indicators.append(f"ema_{indicator['period']}")
+                                elif ind_type == "rsi":
+                                    available_indicators.append("rsi")
+                                elif ind_type == "macd":
+                                    available_indicators.extend(["macd", "macd_signal", "macd_hist"])
+                                elif ind_type == "bollinger_bands":
+                                    available_indicators.extend(["bb_upper", "bb_middle", "bb_lower"])
+                                elif ind_type == "price_channel":
+                                    available_indicators.extend(["pc_high", "pc_middle", "pc_low"])
+                            
+                            # Add price as an option
+                            available_indicators = ["price"] + available_indicators
+                            
+                            # Sell condition form
+                            st.write("When:")
+                            indicator1 = st.selectbox("", options=available_indicators, key="sell_indicator1")
+                            
+                            operator = st.selectbox("", 
+                                options=[">", "<", "=", "crosses above", "crosses below"],
+                                format_func=lambda x: x.replace("crosses above", "crosses above").replace("crosses below", "crosses below"),
+                                key="sell_operator"
+                            )
+                            
+                            # For the second indicator, also allow numerical values
+                            indicator2_type = st.radio("Compare with:", ["Indicator", "Value"], key="sell_indicator2_type")
+                            
+                            if indicator2_type == "Indicator":
+                                indicator2 = st.selectbox("", options=available_indicators, key="sell_indicator2")
+                            else:  # Value
+                                indicator2 = st.number_input("Value", key="sell_value")
+                            
+                            # Translate UI operator to internal operator
+                            op_map = {
+                                ">": ">",
+                                "<": "<",
+                                "=": "=",
+                                "crosses above": "crosses_above",
+                                "crosses below": "crosses_below"
+                            }
+                            
+                            # Button to add condition
+                            if st.button("Add Sell Condition"):
+                                condition = {
+                                    "indicator1": indicator1,
+                                    "operator": op_map[operator],
+                                    "indicator2": str(indicator2)
+                                }
+                                
+                                # Format for display
+                                if indicator2_type == "Value":
+                                    display_condition = f"{indicator1} {operator} {indicator2}"
+                                else:
+                                    display_condition = f"{indicator1} {operator} {indicator2}"
+                                
+                                condition["display"] = display_condition
+                                st.session_state.strategy_sell_conditions.append(condition)
+                                st.success(f"Added sell condition: {display_condition}")
+                                
+                            # Display added conditions
+                            if st.session_state.strategy_sell_conditions:
+                                st.subheader("Defined Sell Conditions")
+                                for i, condition in enumerate(st.session_state.strategy_sell_conditions):
+                                    col1, col2 = st.columns([3, 1])
+                                    with col1:
+                                        st.write(f"{i+1}. {condition['display']}")
+                                    with col2:
+                                        if st.button("Remove", key=f"remove_sell_condition_{i}"):
+                                            st.session_state.strategy_sell_conditions.pop(i)
+                                            st.rerun()
+                            else:
+                                st.info("No sell conditions added yet.")
+                    
+                    # Add parameters for custom strategy
+                    if 'strategy_indicators' in st.session_state:
+                        params["indicators"] = st.session_state.strategy_indicators
+                    else:
+                        params["indicators"] = []
+                        
+                    if 'strategy_buy_conditions' in st.session_state:
+                        params["buy_conditions"] = st.session_state.strategy_buy_conditions
+                    else:
+                        params["buy_conditions"] = []
+                        
+                    if 'strategy_sell_conditions' in st.session_state:
+                        params["sell_conditions"] = st.session_state.strategy_sell_conditions
+                    else:
+                        params["sell_conditions"] = []
             
             if st.button("Create Strategy"):
                 if not strategy_name or not strategy_symbol:

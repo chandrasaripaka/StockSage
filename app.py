@@ -8,6 +8,7 @@ import os
 import threading
 import random
 import string
+import pytz
 from datetime import datetime, timedelta
 from stock_analysis import (
     get_stock_data, 
@@ -24,6 +25,12 @@ from trading_strategies import STRATEGY_REGISTRY, create_strategy
 from db_models import Session, Strategy, Trade, PerformanceMetric, engine
 from tiger_client import TigerBrokersClient
 from trading_bot import TradingBot
+
+# Import day trading components
+from risk_management import RiskManager
+from intraday_analysis import IntradayAnalysis
+from scalping_strategy import ScalpingStrategy
+from volatility_breakout_strategy import VolatilityBreakoutStrategy
 
 # Initialize global trading bot
 trading_bot = None
@@ -116,8 +123,12 @@ with st.sidebar:
     if st.button("Refresh Data"):
         st.rerun()
 
+# Initialize risk manager and intraday analysis
+risk_manager = RiskManager()
+intraday_analyzer = IntradayAnalysis()
+
 # App tabs
-tab1, tab2 = st.tabs(["Stock Analysis", "Algorithmic Trading"])
+tab1, tab2, tab3 = st.tabs(["Stock Analysis", "Algorithmic Trading", "Day Trading"])
 
 # Tab 1: Stock Analysis
 with tab1:

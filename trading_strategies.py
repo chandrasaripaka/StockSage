@@ -589,6 +589,9 @@ class CustomStrategy(BaseStrategy):
 
 
 # Registry of available strategies
+from scalping_strategy import ScalpingStrategy
+from volatility_breakout_strategy import VolatilityBreakoutStrategy
+
 STRATEGY_REGISTRY = {
     'moving_average_crossover': MovingAverageCrossover,
     'MovingAverageCrossover': MovingAverageCrossover,  # Support both naming formats
@@ -597,7 +600,11 @@ STRATEGY_REGISTRY = {
     'macd': MACDStrategy,
     'MACDStrategy': MACDStrategy,  # Support both naming formats
     'custom': CustomStrategy,
-    'CustomStrategy': CustomStrategy  # Support both naming formats
+    'CustomStrategy': CustomStrategy,  # Support both naming formats
+    'scalping': ScalpingStrategy,
+    'ScalpingStrategy': ScalpingStrategy,  # Support both naming formats
+    'volatility_breakout': VolatilityBreakoutStrategy,
+    'VolatilityBreakoutStrategy': VolatilityBreakoutStrategy  # Support both naming formats
 }
 
 def get_strategy_class(strategy_type):

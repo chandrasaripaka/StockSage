@@ -31,10 +31,54 @@ class TradingBot:
     def connect(self):
         """Connect to Tiger Brokers API"""
         try:
+            # Check if API credentials are available in environment
+            if not all([
+                os.environ.get('TIGER_ID'),
+                os.environ.get('TIGER_PRIVATE_KEY'),
+                os.environ.get('TIGER_PRIVATE_KEY_PASSWORD')
+            ]):
+                self.logger.error("Missing one or more Tiger Brokers API credentials in environment")
+                return False
+                
+            # Check the private key file integrity
+            pem_file_path = 'tiger_private_key.pem'
+            with open(pem_file_path, 'r') as f:
+                key_content = f.read()
+                
+            # Ensure private key has proper PEM format
+            if "-----BEGIN RSA PRIVATE KEY-----" not in key_content:
+                self.logger.info("Reformatting private key file with proper PEM header/footer")
+                with open(pem_file_path, 'w') as f:
+                    formatted_key = "-----BEGIN RSA PRIVATE KEY-----\n"
+                    # Strip any existing headers/footers
+                    clean_key = key_content.replace("-----BEGIN RSA PRIVATE KEY-----", "")
+                    clean_key = clean_key.replace("-----END RSA PRIVATE KEY-----", "")
+                    clean_key = clean_key.strip()
+                    formatted_key += clean_key
+                    formatted_key += "\n-----END RSA PRIVATE KEY-----"
+                    f.write(formatted_key)
+                    self.logger.info("Private key reformatted")
+            
+            # Create tiger.properties file
+            tiger_id = os.environ.get('TIGER_ID')
+            private_key_password = os.environ.get('TIGER_PRIVATE_KEY_PASSWORD')
+            
+            with open('tiger.properties', 'w') as f:
+                f.write(f"""tiger_id={tiger_id}
+private_key={pem_file_path}
+private_key_password={private_key_password}
+language=en_US""")
+                self.logger.info("Created tiger.properties file")
+
+            # Initialize client with our prepared files
             self.tiger_client = TigerBrokersClient()
+            self.logger.info("TigerBrokersClient initialized successfully")
             return True
+            
         except Exception as e:
             self.logger.error(f"Failed to connect to Tiger Brokers API: {str(e)}")
+            import traceback
+            self.logger.error(traceback.format_exc())
             return False
     
     def load_strategies_from_db(self):

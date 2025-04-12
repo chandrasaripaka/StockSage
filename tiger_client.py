@@ -15,7 +15,7 @@ class TigerBrokersClient:
     """
     Client for interacting with the Tiger Brokers API
     """
-    def __init__(self):
+    def __init__(self, properties_file=None):
         # Set up logging
         logging.basicConfig(level=logging.INFO, 
                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -26,9 +26,10 @@ class TigerBrokersClient:
         private_key = os.environ.get('TIGER_PRIVATE_KEY')
         private_key_password = os.environ.get('TIGER_PRIVATE_KEY_PASSWORD')
         
-        if not all([tiger_id, private_key, private_key_password]):
-            self.logger.error("Tiger Brokers API credentials not found in environment variables.")
-            raise ValueError("Missing Tiger Brokers API credentials. Please set TIGER_ID, TIGER_PRIVATE_KEY, and TIGER_PRIVATE_KEY_PASSWORD environment variables.")
+        # Check if we have the minimal credentials needed
+        if not tiger_id or not private_key_password:
+            self.logger.error("Tiger ID or private key password not found in environment variables.")
+            raise ValueError("Missing required Tiger Brokers API credentials. Please set at least TIGER_ID and TIGER_PRIVATE_KEY_PASSWORD environment variables.")
         
         # Instead of using the environment variable directly, use the existing PEM file
         # This ensures the key is properly formatted with BEGIN/END tags

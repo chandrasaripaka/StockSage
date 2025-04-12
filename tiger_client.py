@@ -31,18 +31,23 @@ class TigerBrokersClient:
             raise ValueError("Missing Tiger Brokers API credentials. Please set TIGER_ID, TIGER_PRIVATE_KEY, and TIGER_PRIVATE_KEY_PASSWORD environment variables.")
         
         # Create private key file from environment variable
-        with open('tiger_private_key.pem', 'w') as f:
-            f.write(private_key)
+        # Ensure private_key is not None before writing to file
+        if private_key is not None:
+            with open('tiger_private_key.pem', 'w') as f:
+                f.write(private_key)
+        else:
+            self.logger.error("Private key is None, cannot write to file")
+            raise ValueError("Private key is empty or None")
         
-        # Read private key properly - handle password separately
-        private_key_content = read_private_key('tiger_private_key.pem')
+        # The tigeropen library expects the private key file path, not the content
         
-        # Initialize Tiger Open client config
+        # Initialize Tiger Open client config - match the SDK expected parameters
+        # The language parameter might be causing issues - try string value instead of enum
         self.config = TigerOpenClientConfig(
             tiger_id=tiger_id,
-            private_key=private_key_content,
-            private_key_password=private_key_password,  # Pass password as a separate parameter
-            language=Language.ENGLISH
+            private_key='tiger_private_key.pem',  # Pass the file path
+            private_key_password=private_key_password,
+            language='en_US'  # Use string instead of enum
         )
         
         # Initialize clients

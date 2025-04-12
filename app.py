@@ -6,6 +6,8 @@ import numpy as np
 import json
 import os
 import threading
+import random
+import string
 from datetime import datetime, timedelta
 from stock_analysis import (
     get_stock_data, 
@@ -985,7 +987,155 @@ with tab2:
                     st.error(f"Error fetching account information: {str(e)}")
         
         # Performance tab
+        # Trades tab
         with algo_tabs[2]:
+            st.subheader("Trading Activity")
+            
+            # Get trades from database
+            trades_session = Session(bind=engine)  # Explicitly bind session to engine
+            trades = trades_session.query(Trade).order_by(Trade.timestamp.desc()).all()
+            
+            # Filter options
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                filter_symbol = st.text_input("Filter by Symbol", placeholder="e.g., AAPL")
+            with col2:
+                filter_direction = st.selectbox("Filter by Direction", options=["All", "BUY", "SELL"], index=0)
+            with col3:
+                filter_status = st.selectbox("Filter by Status", options=["All", "PENDING", "FILLED", "CANCELLED", "REJECTED"], index=0)
+            
+            # Apply filters
+            filtered_trades = []
+            for trade in trades:
+                if filter_symbol and filter_symbol.upper() != trade.symbol.upper():
+                    continue
+                if filter_direction != "All" and filter_direction != trade.direction:
+                    continue
+                if filter_status != "All" and filter_status != trade.status:
+                    continue
+                
+                # Get strategy name
+                strategy = trades_session.query(Strategy).filter_by(id=trade.strategy_id).first()
+                strategy_name = strategy.name if strategy else "Unknown"
+                
+                # Calculate holding period for closed trades
+                holding_period = ""
+                if trade.exit_timestamp and trade.timestamp:
+                    delta = trade.exit_timestamp - trade.timestamp
+                    days = delta.days
+                    hours, remainder = divmod(delta.seconds, 3600)
+                    minutes, _ = divmod(remainder, 60)
+                    
+                    if days > 0:
+                        holding_period = f"{days}d {hours}h"
+                    elif hours > 0:
+                        holding_period = f"{hours}h {minutes}m"
+                    else:
+                        holding_period = f"{minutes}m"
+                
+                # Format profit/loss
+                pl_color = ""
+                pl_display = ""
+                if trade.profit_loss is not None:
+                    pl_color = "green" if trade.profit_loss > 0 else ("red" if trade.profit_loss < 0 else "")
+                    pl_display = f"${trade.profit_loss:.2f} ({trade.profit_loss_percent:.2f}%)" if trade.profit_loss_percent is not None else f"${trade.profit_loss:.2f}"
+                
+                filtered_trades.append({
+                    "ID": trade.id,
+                    "Strategy": strategy_name,
+                    "Symbol": trade.symbol,
+                    "Action": trade.direction,
+                    "Quantity": trade.quantity,
+                    "Entry Price": f"${trade.price:.2f}" if trade.price else "",
+                    "Exit Price": f"${trade.exit_price:.2f}" if trade.exit_price else "",
+                    "P/L": pl_display,
+                    "Status": trade.status,
+                    "Entry Time": trade.timestamp.strftime("%Y-%m-%d %H:%M") if trade.timestamp else "",
+                    "Exit Time": trade.exit_timestamp.strftime("%Y-%m-%d %H:%M") if trade.exit_timestamp else "",
+                    "Holding Period": holding_period,
+                    "Order ID": trade.order_id,
+                    "pl_color": pl_color  # For highlighting
+                })
+            
+            trades_session.close()
+            
+            # Display trades
+            if filtered_trades:
+                st.write(f"Showing {len(filtered_trades)} trades")
+                
+                # Convert to DataFrame for display
+                trades_df = pd.DataFrame(filtered_trades)
+                display_cols = [col for col in trades_df.columns if col != "pl_color"]
+                
+                # Display dataframe
+                st.dataframe(trades_df[display_cols], use_container_width=True)
+                
+                # Trading activity summary
+                st.subheader("Trading Summary")
+                total_trades = len(filtered_trades)
+                
+                # Calculate winning and losing trades
+                winning_trades = sum(1 for t in filtered_trades if t["pl_color"] == "green")
+                losing_trades = sum(1 for t in filtered_trades if t["pl_color"] == "red")
+                win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+                
+                # Display metrics
+                metric_cols = st.columns(4)
+                with metric_cols[0]:
+                    st.metric("Total Trades", total_trades)
+                with metric_cols[1]:
+                    st.metric("Winning Trades", winning_trades)
+                with metric_cols[2]:
+                    st.metric("Losing Trades", losing_trades) 
+                with metric_cols[3]:
+                    st.metric("Win Rate", f"{win_rate:.1f}%")
+            else:
+                st.info("No trades found with the selected filters.")
+                
+                # Add a demo trade button for testing
+                if st.button("Generate Demo Trade"):
+                    # Create a new session
+                    session = Session(bind=engine)
+                    try:
+                        # Get a random active strategy
+                        strategy = session.query(Strategy).first()
+                        
+                        if strategy:
+                            # Create a demo trade
+                            now = datetime.now()
+                            
+                            # Random trade details
+                            direction = "BUY" if random.random() > 0.5 else "SELL"
+                            price = round(random.uniform(100, 200), 2)
+                            quantity = random.randint(1, 20)
+                            order_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
+                            
+                            # Create trade object
+                            trade = Trade(
+                                strategy_id=strategy.id,
+                                order_id=order_id,
+                                symbol=strategy.symbol,
+                                direction=direction,
+                                quantity=quantity,
+                                price=price,
+                                timestamp=now,
+                                status="FILLED"
+                            )
+                            
+                            # Add to database
+                            session.add(trade)
+                            session.commit()
+                            st.success(f"Created demo {direction} trade for {quantity} shares of {strategy.symbol} at ${price:.2f}")
+                            st.rerun()
+                        else:
+                            st.error("No strategies found. Please create a strategy first.")
+                    except Exception as e:
+                        st.error(f"Error creating demo trade: {str(e)}")
+                    finally:
+                        session.close()
+        
+        # Performance tab
+        with algo_tabs[3]:
             st.subheader("Strategy Performance")
             
             # Get performance metrics from database
@@ -1103,7 +1253,7 @@ with tab2:
             performance_session.close()
         
         # Logs tab
-        with algo_tabs[3]:
+        with algo_tabs[4]:
             st.subheader("Trading Bot Logs")
             
             # Display most recent trades from database

@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=stocktrading
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/stocktrading
+      - USE_MOCK_TIGER=true
+    depends_on:
+      - db
+    volumes:
+      - ./tiger_private_key.pem:/app/tiger_private_key.pem:ro
+    restart: unless-stopped
+
+  db:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=stocktrading
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

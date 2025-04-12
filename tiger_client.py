@@ -34,10 +34,14 @@ class TigerBrokersClient:
         with open('tiger_private_key.pem', 'w') as f:
             f.write(private_key)
         
+        # Read private key properly - handle password separately
+        private_key_content = read_private_key('tiger_private_key.pem')
+        
         # Initialize Tiger Open client config
         self.config = TigerOpenClientConfig(
             tiger_id=tiger_id,
-            private_key=read_private_key('tiger_private_key.pem', private_key_password),
+            private_key=private_key_content,
+            private_key_password=private_key_password,  # Pass password as a separate parameter
             language=Language.ENGLISH
         )
         

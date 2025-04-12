@@ -10,6 +10,7 @@ RUN apt-get update && \
     curl \
     gnupg2 \
     procps \
+    gettext-base \  # For envsubst command
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements

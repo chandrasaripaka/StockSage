@@ -60,15 +60,19 @@ A comprehensive web-based stock analysis and trading platform built with Streaml
 
 The application can run in mock mode without real trading capabilities. To connect to a real Tiger Brokers account:
 
-1. Set your Tiger Brokers API credentials as environment variables in the `docker-compose.yml` file:
-   ```yaml
-   environment:
-     - TIGER_ID=your_tiger_id
-     - TIGER_PRIVATE_KEY_PASSWORD=your_private_key_password
-     - USE_MOCK_TIGER=false
+1. Edit your `.env` file and update the Tiger Brokers credentials:
+   ```
+   # Tiger Brokers API Configuration
+   USE_MOCK_TIGER=false
+   TIGER_ID=your_tiger_id_here
+   TIGER_PRIVATE_KEY_PASSWORD=your_password_here
    ```
 
-2. Make sure your `tiger_private_key.pem` file is present in the project root directory.
+2. Make sure your `tiger_private_key.pem` file is present in the project root directory with the correct private key content:
+   ```bash
+   # Replace the template key with your actual Tiger Brokers private key
+   nano tiger_private_key.pem
+   ```
 
 3. Restart the application:
    ```bash
@@ -79,6 +83,28 @@ The application can run in mock mode without real trading capabilities. To conne
 ### Persistent Data
 
 The PostgreSQL database is configured to store data persistently in a Docker volume. This means your trading history, strategies, and configuration will be preserved between restarts.
+
+### Troubleshooting
+
+- **Database Connection Issues**: If the application fails to connect to the database, check your PostgreSQL credentials in the `.env` file and make sure the database service is running.
+  ```bash
+  docker-compose ps db  # Check if the database container is running
+  docker-compose logs db  # View database logs
+  ```
+
+- **Tiger Brokers API Connection**: If you're having trouble connecting to the Tiger Brokers API:
+  1. Verify your credentials in the `.env` file
+  2. Check that your private key file is correctly formatted and accessible
+  3. Look at the application logs for specific error messages:
+     ```bash
+     docker-compose logs app | grep "Tiger"
+     ```
+
+- **Container Not Starting**: If a container fails to start:
+  ```bash
+  docker-compose ps  # Check container status
+  docker-compose logs  # View all logs
+  ```
 
 ## Development
 
@@ -103,6 +129,23 @@ If you want to develop or extend the application without Docker:
    ```bash
    streamlit run app.py
    ```
+
+## Deployment Environments
+
+### Local Development
+The default Docker Compose setup is designed for local development. It provides:
+- A single-node PostgreSQL database
+- Hot-reloading of the application (changes reflect immediately)
+- Debug-level logging
+- Mock Tiger Brokers client for development without real API credentials
+
+### Production Deployment
+For production deployment, consider:
+- Adding TLS/SSL with a reverse proxy like Nginx or Traefik
+- Setting up database backups
+- Configuring more restrictive security settings
+- Using real Tiger Brokers API credentials with proper security measures
+- Implementing proper logging and monitoring solutions
 
 ## License
 

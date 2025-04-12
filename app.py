@@ -442,7 +442,7 @@ with tab2:
             st.subheader("Trading Strategies")
             
             # Existing strategies
-            strategy_session = Session(engine)
+            strategy_session = Session()  # Session already bound to engine in db_models.py
             strategies = strategy_session.query(Strategy).all()
             
             if strategies:
@@ -924,7 +924,7 @@ with tab2:
             st.subheader("Strategy Performance")
             
             # Get performance metrics from database
-            performance_session = Session(engine)
+            performance_session = Session()
             metrics = performance_session.query(
                 Strategy.name,
                 Strategy.symbol,
@@ -1042,7 +1042,7 @@ with tab2:
             st.subheader("Trading Bot Logs")
             
             # Display most recent trades from database
-            logs_session = Session(engine)
+            logs_session = Session()
             recent_trades = logs_session.query(Trade).order_by(Trade.timestamp.desc()).limit(50).all()
             
             if recent_trades:

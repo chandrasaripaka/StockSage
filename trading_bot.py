@@ -112,7 +112,7 @@ language=en_US""")
     
     def load_strategies_from_db(self):
         """Load active strategies from the database"""
-        session = Session(engine)
+        session = Session()
         try:
             strategies = session.query(Strategy).filter_by(is_active=True).all()
             

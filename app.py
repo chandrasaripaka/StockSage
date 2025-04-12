@@ -1314,3 +1314,715 @@ with tab2:
                     )
             else:
                 st.info("No trading activity recorded yet.")
+
+
+# Tab 3: Day Trading
+with tab3:
+    st.header("Day Trading")
+    st.markdown("Tools and strategies for intraday trading and risk management")
+    
+    # Check if Tiger Brokers is connected
+    if trading_bot is None or not trading_bot.connect():
+        st.warning("You need to connect to Tiger Brokers in the Algorithmic Trading tab before using the Day Trading features.")
+    else:
+        # Tab navigation
+        day_trading_tabs = st.tabs(["Intraday Analysis", "Scalping Strategy", "Volatility Breakout", "Risk Management"])
+        
+        # Tab 1: Intraday Analysis
+        with day_trading_tabs[0]:
+            st.subheader("Intraday Session Analysis")
+            st.markdown("Analyze market behavior across different trading sessions")
+            
+            # Input parameters
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                intra_symbol = st.text_input("Symbol", value=stock_symbol, key="intraday_symbol")
+                
+            with col2:
+                intra_interval = st.selectbox(
+                    "Interval", 
+                    ["1m", "5m", "15m", "30m", "60m"],
+                    index=1,
+                    key="intraday_interval"
+                )
+                
+            with col3:
+                intra_days = st.slider(
+                    "Days to analyze", 
+                    min_value=1, 
+                    max_value=10, 
+                    value=5,
+                    key="intraday_days"
+                )
+            
+            # Button to trigger analysis
+            if st.button("Analyze Intraday Sessions", key="analyze_intraday"):
+                with st.spinner(f"Analyzing intraday patterns for {intra_symbol}..."):
+                    # Get intraday data
+                    try:
+                        intraday_data = intraday_analyzer.get_intraday_data(
+                            intra_symbol, 
+                            interval=intra_interval, 
+                            days=intra_days
+                        )
+                        
+                        if intraday_data is None or len(intraday_data) == 0:
+                            st.error(f"Could not retrieve intraday data for {intra_symbol}")
+                        else:
+                            # Add session information
+                            intraday_data['session'] = intraday_data['datetime'].apply(intraday_analyzer.identify_session)
+                            
+                            # Show session statistics
+                            st.subheader("Session Analysis")
+                            
+                            # Create session analysis
+                            session_analysis = intraday_analyzer.analyze_intraday_session(
+                                intra_symbol, 
+                                interval=intra_interval
+                            )
+                            
+                            if session_analysis and 'session_stats' in session_analysis:
+                                # Display session performance metrics
+                                session_metrics = session_analysis['session_stats']
+                                volatility = session_analysis['volatility']
+                                
+                                # Create columns for each session
+                                metric_cols = st.columns(3)
+                                
+                                # Session metrics
+                                for i, (session, metrics) in enumerate(session_metrics.items()):
+                                    with metric_cols[i % 3]:
+                                        st.markdown(f"#### {session}")
+                                        
+                                        # Return metrics
+                                        if 'avg_return' in metrics and not pd.isna(metrics['avg_return']):
+                                            ret_color = "green" if metrics['avg_return'] > 0 else "red"
+                                            st.markdown(f"**Avg Return:** <span style='color:{ret_color}'>{metrics['avg_return']*100:.2f}%</span>", unsafe_allow_html=True)
+                                        
+                                        # Win rate
+                                        if 'win_rate' in metrics and not pd.isna(metrics['win_rate']):
+                                            st.markdown(f"**Win Rate:** {metrics['win_rate']*100:.1f}%")
+                                        
+                                        # Volume
+                                        if 'avg_volume' in metrics and not pd.isna(metrics['avg_volume']):
+                                            st.markdown(f"**Avg Volume:** {format_large_number(metrics['avg_volume'])}")
+                                        
+                                        # Volatility
+                                        if session in volatility:
+                                            st.markdown(f"**Volatility:** {volatility[session]*100:.2f}%")
+                                
+                                # Create price chart with session highlighted
+                                if 'price_data' in session_analysis:
+                                    price_data = session_analysis['price_data']
+                                    
+                                    # Create figure for price chart
+                                    fig = go.Figure()
+                                    
+                                    # Create trace for each session
+                                    for session_type in ['Pre-Market', 'Regular Hours', 'After Hours']:
+                                        session_data = price_data[price_data['session'] == session_type]
+                                        
+                                        if len(session_data) > 0:
+                                            # Set colors for each session
+                                            if session_type == 'Pre-Market':
+                                                color = 'orange'
+                                            elif session_type == 'Regular Hours':
+                                                color = 'blue'
+                                            else:  # After Hours
+                                                color = 'purple'
+                                                
+                                            fig.add_trace(
+                                                go.Candlestick(
+                                                    x=session_data['datetime'],
+                                                    open=session_data['open'],
+                                                    high=session_data['high'],
+                                                    low=session_data['low'],
+                                                    close=session_data['close'],
+                                                    name=session_type,
+                                                    increasing=dict(line=dict(color=color)),
+                                                    decreasing=dict(line=dict(color=color))
+                                                )
+                                            )
+                                    
+                                    # Update layout
+                                    fig.update_layout(
+                                        title=f"{intra_symbol} - Intraday Price by Session",
+                                        xaxis_title="Time",
+                                        yaxis_title="Price ($)",
+                                        height=500,
+                                        margin=dict(l=0, r=0, t=40, b=0),
+                                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                                        template="plotly_dark",
+                                        xaxis_rangeslider_visible=False
+                                    )
+                                    
+                                    # Display the chart
+                                    st.plotly_chart(fig, use_container_width=True)
+                                    
+                                # Volume profile chart
+                                vol_profile = intraday_analyzer.get_volume_profile(
+                                    intra_symbol, interval=intra_interval, days=intra_days
+                                )
+                                
+                                if vol_profile and 'volume_by_hour' in vol_profile:
+                                    st.subheader("Volume Profile")
+                                    
+                                    vol_data = pd.DataFrame(vol_profile['volume_by_hour'])
+                                    
+                                    # Create volume by hour chart
+                                    volume_fig = go.Figure()
+                                    
+                                    # Add volume bars
+                                    volume_fig.add_trace(
+                                        go.Bar(
+                                            x=vol_data['hour'],
+                                            y=vol_data['volume'],
+                                            name="Volume",
+                                            marker_color=['red' if h in vol_profile['high_volume_hours'] else 'blue' 
+                                                         for h in vol_data['hour']]
+                                        )
+                                    )
+                                    
+                                    # Update layout
+                                    volume_fig.update_layout(
+                                        title=f"{intra_symbol} - Average Volume by Hour",
+                                        xaxis_title="Hour of Day (ET)",
+                                        yaxis_title="Average Volume",
+                                        height=400,
+                                        margin=dict(l=0, r=0, t=40, b=0),
+                                        template="plotly_dark"
+                                    )
+                                    
+                                    # Display the chart
+                                    st.plotly_chart(volume_fig, use_container_width=True)
+                                    
+                                    # Display insights
+                                    st.subheader("Trading Insights")
+                                    st.markdown(f"""
+                                    **High Volume Hours:** {', '.join([f"{h}:00" for h in vol_profile['high_volume_hours']])}
+                                    
+                                    **Best Session Performance:** {max(session_metrics.items(), key=lambda x: x[1].get('avg_return', -999))[0]}
+                                    
+                                    **Most Predictable Session:** {max(session_metrics.items(), key=lambda x: x[1].get('win_rate', 0))[0]} 
+                                    (Win Rate: {max(session_metrics.items(), key=lambda x: x[1].get('win_rate', 0))[1].get('win_rate', 0)*100:.1f}%)
+                                    """)
+                            else:
+                                st.error("Could not perform session analysis. Insufficient data.")
+                    except Exception as e:
+                        st.error(f"Error during intraday analysis: {str(e)}")
+            else:
+                st.info("Click 'Analyze Intraday Sessions' to see detailed session analysis for the selected symbol.")
+        
+        # Tab 2: Scalping Strategy
+        with day_trading_tabs[1]:
+            st.subheader("Scalping Strategy")
+            st.markdown("Rapid trading for small, frequent profits")
+            
+            # Strategy configuration
+            st.markdown("### Strategy Configuration")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                scalp_symbol = st.text_input("Symbol", value=stock_symbol, key="scalp_symbol")
+                scalp_name = st.text_input("Strategy Name", value=f"Scalping-{scalp_symbol}", key="scalp_name")
+                ema_period = st.slider("EMA Period", min_value=3, max_value=20, value=9, key="ema_period")
+                volume_threshold = st.slider("Volume Threshold", min_value=1.0, max_value=3.0, value=1.5, step=0.1, key="volume_threshold")
+            
+            with col2:
+                scalp_timeframe = st.selectbox(
+                    "Timeframe", 
+                    ["1m", "3m", "5m", "15m", "30m"],
+                    index=2,
+                    key="scalp_timeframe"
+                )
+                price_change_threshold = st.slider(
+                    "Price Change Threshold (%)", 
+                    min_value=0.1, 
+                    max_value=1.0, 
+                    value=0.2,
+                    step=0.05,
+                    key="price_change"
+                )
+                momentum_lookback = st.slider(
+                    "Momentum Lookback", 
+                    min_value=2, 
+                    max_value=10, 
+                    value=5,
+                    key="momentum_lookback"
+                )
+            
+            # Create strategy button
+            if st.button("Create Scalping Strategy", key="create_scalp"):
+                try:
+                    # Create strategy and add to trading bot
+                    trading_bot.add_strategy(
+                        strategy_type="scalping",
+                        name=scalp_name,
+                        symbol=scalp_symbol,
+                        timeframe=scalp_timeframe,
+                        ema_period=ema_period,
+                        volume_threshold=volume_threshold,
+                        price_change_threshold=price_change_threshold,
+                        momentum_lookback=momentum_lookback
+                    )
+                    
+                    st.success(f"Created scalping strategy: {scalp_name}")
+                    
+                    # Show the strategy setup
+                    st.markdown(f"""
+                    ### Strategy Details
+                    
+                    **Name:** {scalp_name}
+                    **Symbol:** {scalp_symbol}
+                    **Timeframe:** {scalp_timeframe}
+                    
+                    **Parameters:**
+                    - EMA Period: {ema_period}
+                    - Volume Threshold: {volume_threshold}x
+                    - Price Change Threshold: {price_change_threshold}%
+                    - Momentum Lookback: {momentum_lookback} periods
+                    
+                    *View current signals in the Strategies tab of the Algorithmic Trading section.*
+                    """)
+                except Exception as e:
+                    st.error(f"Error creating strategy: {str(e)}")
+            
+            # Scalping strategy explanation
+            with st.expander("Scalping Strategy Explanation"):
+                st.markdown("""
+                ### Scalping Strategy Details
+                
+                The scalping strategy is designed for very short-term trades lasting minutes to hours, aiming
+                to capture small price movements with high frequency.
+                
+                **Key Components:**
+                
+                1. **EMA Trend Filter:** Uses an Exponential Moving Average to identify the short-term trend direction
+                
+                2. **Volume Surge Detection:** Identifies periods of higher-than-average volume which often precede price movements
+                
+                3. **Momentum Confirmation:** Ensures the price is moving in the expected direction with sufficient momentum
+                
+                4. **Price Action Confirmation:** Analyzes candle patterns and price position within the range
+                
+                **Buy Signals** are generated when:
+                - Price is above EMA (uptrend)
+                - Volume is above threshold (increased interest)
+                - Short-term momentum is positive
+                - Price closes near the high of the candle (strong buying)
+                
+                **Sell Signals** are generated when:
+                - Price is below EMA (downtrend)
+                - Volume is above threshold (increased interest)
+                - Short-term momentum is negative
+                - Price closes near the low of the candle (strong selling)
+                
+                This strategy works best in volatile markets with sufficient liquidity and is typically not held overnight.
+                """)
+        
+        # Tab 3: Volatility Breakout
+        with day_trading_tabs[2]:
+            st.subheader("Volatility Breakout Strategy")
+            st.markdown("Capture breakouts after periods of consolidation")
+            
+            # Strategy configuration
+            st.markdown("### Strategy Configuration")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                vb_symbol = st.text_input("Symbol", value=stock_symbol, key="vb_symbol")
+                vb_name = st.text_input("Strategy Name", value=f"Breakout-{vb_symbol}", key="vb_name")
+                atr_period = st.slider("ATR Period", min_value=5, max_value=30, value=14, key="atr_period")
+                breakout_multiple = st.slider("Breakout ATR Multiple", min_value=0.5, max_value=3.0, value=1.5, step=0.1, key="breakout_multiple")
+            
+            with col2:
+                vb_timeframe = st.selectbox(
+                    "Timeframe", 
+                    ["1m", "5m", "15m", "30m", "60m"],
+                    index=2,
+                    key="vb_timeframe"
+                )
+                consolidation_periods = st.slider(
+                    "Consolidation Periods", 
+                    min_value=3, 
+                    max_value=15, 
+                    value=5,
+                    key="consolidation_periods"
+                )
+                max_volatility_threshold = st.slider(
+                    "Max Volatility Threshold (%)", 
+                    min_value=0.5, 
+                    max_value=3.0, 
+                    value=1.5,
+                    step=0.1,
+                    key="volatility_threshold"
+                ) / 100  # Convert to decimal
+            
+            # Create strategy button
+            if st.button("Create Volatility Breakout Strategy", key="create_vb"):
+                try:
+                    # Create strategy and add to trading bot
+                    trading_bot.add_strategy(
+                        strategy_type="volatility_breakout",
+                        name=vb_name,
+                        symbol=vb_symbol,
+                        timeframe=vb_timeframe,
+                        atr_period=atr_period,
+                        breakout_multiple=breakout_multiple,
+                        consolidation_periods=consolidation_periods,
+                        max_volatility_threshold=max_volatility_threshold
+                    )
+                    
+                    st.success(f"Created volatility breakout strategy: {vb_name}")
+                    
+                    # Show the strategy setup
+                    st.markdown(f"""
+                    ### Strategy Details
+                    
+                    **Name:** {vb_name}
+                    **Symbol:** {vb_symbol}
+                    **Timeframe:** {vb_timeframe}
+                    
+                    **Parameters:**
+                    - ATR Period: {atr_period}
+                    - Breakout Multiple: {breakout_multiple}x ATR
+                    - Consolidation Periods: {consolidation_periods}
+                    - Max Volatility Threshold: {max_volatility_threshold*100}%
+                    
+                    *View current signals in the Strategies tab of the Algorithmic Trading section.*
+                    """)
+                except Exception as e:
+                    st.error(f"Error creating strategy: {str(e)}")
+            
+            # Volatility Breakout explanation
+            with st.expander("Volatility Breakout Strategy Explanation"):
+                st.markdown("""
+                ### Volatility Breakout Strategy Details
+                
+                The volatility breakout strategy identifies periods of low volatility (consolidation) followed by
+                significant price movements (breakouts) that often present trading opportunities.
+                
+                **Key Components:**
+                
+                1. **Average True Range (ATR):** Measures market volatility
+                
+                2. **Consolidation Detection:** Identifies periods of lower-than-normal volatility
+                
+                3. **Breakout Thresholds:** Dynamic levels based on volatility that trigger signals when breached
+                
+                4. **Volume Confirmation:** Uses volume surge to confirm breakout strength
+                
+                **Buy Signals** are generated when:
+                - Price has been consolidating (low volatility) for several periods
+                - Price breaks above the upper threshold (previous high + ATR multiple)
+                - Ideally confirmed by increased volume
+                
+                **Sell Signals** are generated when:
+                - Price has been consolidating (low volatility) for several periods
+                - Price breaks below the lower threshold (previous low - ATR multiple)
+                - Ideally confirmed by increased volume
+                
+                This strategy works well in markets that exhibit cyclical volatility and tends to perform best
+                around key market events, earnings announcements, and during regular market hours.
+                """)
+        
+        # Tab 4: Risk Management
+        with day_trading_tabs[3]:
+            st.subheader("Risk Management")
+            st.markdown("Control risk parameters for day trading")
+            
+            # Risk settings
+            st.markdown("### Risk Parameters")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                account_balance = st.number_input(
+                    "Account Balance ($)", 
+                    min_value=1000.0, 
+                    value=10000.0, 
+                    step=1000.0,
+                    key="account_balance"
+                )
+                
+                max_daily_loss_pct = st.slider(
+                    "Maximum Daily Loss (%)", 
+                    min_value=0.5, 
+                    max_value=5.0, 
+                    value=2.0,
+                    step=0.5,
+                    key="max_daily_loss"
+                ) / 100  # Convert to decimal
+                
+                max_position_size_pct = st.slider(
+                    "Maximum Position Size (%)", 
+                    min_value=1.0, 
+                    max_value=20.0, 
+                    value=5.0,
+                    step=1.0,
+                    key="max_position_size"
+                ) / 100  # Convert to decimal
+            
+            with col2:
+                max_open_positions = st.slider(
+                    "Maximum Open Positions", 
+                    min_value=1, 
+                    max_value=10, 
+                    value=3,
+                    key="max_positions"
+                )
+                
+                risk_per_trade_pct = st.slider(
+                    "Risk Per Trade (%)", 
+                    min_value=0.1, 
+                    max_value=2.0, 
+                    value=1.0,
+                    step=0.1,
+                    key="risk_per_trade"
+                ) / 100  # Convert to decimal
+                
+                position_sizing_method = st.selectbox(
+                    "Position Sizing Method",
+                    ["Fixed Risk %", "Volatility Based", "Fixed Position Size"],
+                    index=1,
+                    key="position_sizing"
+                )
+            
+            # Apply risk settings
+            if st.button("Apply Risk Settings", key="apply_risk"):
+                # Update risk manager with new settings
+                risk_manager.account_balance = account_balance
+                risk_manager.set_risk_parameters(
+                    max_daily_loss_pct=max_daily_loss_pct,
+                    max_position_size_pct=max_position_size_pct,
+                    max_open_positions=max_open_positions
+                )
+                
+                st.success("Risk parameters updated successfully")
+                
+                # Display current risk limits
+                max_loss_amount = account_balance * max_daily_loss_pct
+                max_position_amount = account_balance * max_position_size_pct
+                
+                st.markdown(f"""
+                ### Current Risk Limits
+                
+                **Maximum Daily Loss:** ${max_loss_amount:.2f} ({max_daily_loss_pct*100}% of account)
+                **Maximum Position Size:** ${max_position_amount:.2f} ({max_position_size_pct*100}% of account)
+                **Maximum Open Positions:** {max_open_positions}
+                **Risk Per Trade:** {risk_per_trade_pct*100}% of account (${account_balance * risk_per_trade_pct:.2f})
+                """)
+            
+            # Position size calculator
+            st.markdown("### Position Size Calculator")
+            
+            pos_col1, pos_col2, pos_col3 = st.columns(3)
+            
+            with pos_col1:
+                calc_symbol = st.text_input("Symbol", value=stock_symbol, key="calc_symbol")
+                
+            with pos_col2:
+                current_price = st.number_input("Current Price ($)", min_value=0.1, value=100.0, step=0.1, key="current_price")
+                
+            with pos_col3:
+                if position_sizing_method == "Volatility Based":
+                    atr_value = st.number_input("ATR Value", min_value=0.01, value=1.0, step=0.1, key="atr_value")
+                else:
+                    atr_value = None
+            
+            # Calculate position size
+            if st.button("Calculate Position Size", key="calc_position"):
+                try:
+                    # Calculate position size
+                    if position_sizing_method == "Fixed Risk %":
+                        max_risk = account_balance * risk_per_trade_pct
+                        stop_loss_pct = st.session_state.get("stop_loss_pct", 0.02)  # Default 2%
+                        risk_per_share = current_price * stop_loss_pct
+                        position_size = max_risk / risk_per_share
+                        position_value = position_size * current_price
+                        
+                        # Show calculation
+                        st.markdown(f"""
+                        ### Position Size Calculation (Fixed Risk %)
+                        
+                        - Account Balance: ${account_balance:.2f}
+                        - Risk Per Trade: {risk_per_trade_pct*100}% (${max_risk:.2f})
+                        - Current Price: ${current_price:.2f}
+                        - Stop Loss: {stop_loss_pct*100}% (${risk_per_share:.2f} per share)
+                        
+                        **Position Size: {position_size:.0f} shares (${position_value:.2f})**
+                        """)
+                        
+                    elif position_sizing_method == "Volatility Based":
+                        max_risk = account_balance * risk_per_trade_pct
+                        position_size = max_risk / atr_value
+                        position_value = position_size * current_price
+                        
+                        # Adjust if exceeds max position size
+                        max_position_value = account_balance * max_position_size_pct
+                        if position_value > max_position_value:
+                            position_size = max_position_value / current_price
+                            position_value = max_position_value
+                        
+                        # Show calculation
+                        st.markdown(f"""
+                        ### Position Size Calculation (Volatility Based)
+                        
+                        - Account Balance: ${account_balance:.2f}
+                        - Risk Per Trade: {risk_per_trade_pct*100}% (${max_risk:.2f})
+                        - Current Price: ${current_price:.2f}
+                        - ATR Value: ${atr_value:.2f}
+                        
+                        **Position Size: {position_size:.0f} shares (${position_value:.2f})**
+                        """)
+                        
+                    else:  # Fixed Position Size
+                        position_value = account_balance * max_position_size_pct
+                        position_size = position_value / current_price
+                        
+                        # Show calculation
+                        st.markdown(f"""
+                        ### Position Size Calculation (Fixed Position %)
+                        
+                        - Account Balance: ${account_balance:.2f}
+                        - Max Position Size: {max_position_size_pct*100}% (${position_value:.2f})
+                        - Current Price: ${current_price:.2f}
+                        
+                        **Position Size: {position_size:.0f} shares (${position_value:.2f})**
+                        """)
+                    
+                except Exception as e:
+                    st.error(f"Error calculating position size: {str(e)}")
+            
+            # Daily PnL tracking
+            st.markdown("### Trading Session P&L")
+            
+            # Calculate current daily P&L
+            daily_pnl, num_trades = risk_manager.calculate_daily_pnl()
+            
+            # Show daily P&L information
+            pnl_col1, pnl_col2 = st.columns(2)
+            
+            with pnl_col1:
+                # Daily P&L display
+                pnl_color = "green" if daily_pnl >= 0 else "red"
+                pnl_prefix = "+" if daily_pnl > 0 else ""
+                
+                st.markdown(f"""
+                ### Today's P&L
+                
+                <h2 style="color: {pnl_color}">{pnl_prefix}${daily_pnl:.2f}</h2>
+                """, unsafe_allow_html=True)
+                
+                # Check daily loss limit
+                limit_hit, (current_loss, max_loss) = risk_manager.check_daily_loss_limit()
+                
+                if limit_hit:
+                    st.warning(f"⚠️ Daily loss limit reached: ${current_loss:.2f} / ${max_loss:.2f}")
+                    
+                    # Recommend actions
+                    st.markdown("""
+                    **Recommended Actions:**
+                    - Close all open positions
+                    - Stop trading for the day
+                    - Review your trading journal
+                    """)
+                    
+            with pnl_col2:
+                # Trade count display
+                st.markdown(f"""
+                ### Trade Statistics
+                
+                **Open Positions:** {num_trades}
+                **Max Positions:** {max_open_positions}
+                **Position Capacity:** {max_open_positions - num_trades} remaining
+                """)
+                
+                # Position limit warning
+                if risk_manager.check_max_positions():
+                    st.warning(f"⚠️ Maximum number of open positions reached ({num_trades})")
+            
+            # Session stats
+            with st.expander("View Session Statistics", expanded=False):
+                # Get session stats
+                regular_stats = risk_manager.get_session_stats('US')
+                pre_stats = risk_manager.get_session_stats('Pre')
+                post_stats = risk_manager.get_session_stats('Post')
+                
+                # Display in columns
+                session_cols = st.columns(3)
+                
+                with session_cols[0]:
+                    st.markdown("### Regular Session")
+                    st.markdown(f"""
+                    - **Trades:** {regular_stats['total_trades']}
+                    - **Win Rate:** {regular_stats['win_rate']*100:.1f}%
+                    - **P&L:** ${regular_stats['total_pnl']:.2f}
+                    """)
+                    
+                with session_cols[1]:
+                    st.markdown("### Pre-Market")
+                    st.markdown(f"""
+                    - **Trades:** {pre_stats['total_trades']}
+                    - **Win Rate:** {pre_stats['win_rate']*100:.1f}%
+                    - **P&L:** ${pre_stats['total_pnl']:.2f}
+                    """)
+                    
+                with session_cols[2]:
+                    st.markdown("### After Hours")
+                    st.markdown(f"""
+                    - **Trades:** {post_stats['total_trades']}
+                    - **Win Rate:** {post_stats['win_rate']*100:.1f}%
+                    - **P&L:** ${post_stats['total_pnl']:.2f}
+                    """)
+            
+            # Risk management explanation
+            with st.expander("Risk Management Guidelines", expanded=False):
+                st.markdown("""
+                ### Risk Management for Day Trading
+                
+                Effective risk management is essential for consistent profitability in day trading.
+                
+                **Key Principles:**
+                
+                1. **Capital Preservation:** Never risk more than you can afford to lose
+                
+                2. **Position Sizing:** Scale position size based on volatility and risk parameters
+                
+                3. **Daily Loss Limits:** Set a maximum daily loss threshold to prevent overtrading
+                
+                4. **Risk per Trade:** Limit risk on any single trade to a small percentage of account
+                
+                5. **Concurrent Position Limits:** Limit the number of open positions to manage overall exposure
+                
+                **Recommended Settings:**
+                
+                - Maximum daily loss: 1-3% of account
+                - Risk per trade: 0.5-1% of account
+                - Position size: 2-5% of account (volatility adjusted)
+                - Maximum positions: 3-5 concurrent trades
+                
+                **Adjusting for Market Conditions:**
+                
+                - *High Volatility Markets:* Reduce position sizes, tighten stops
+                - *Low Volatility Markets:* Consider wider stops but maintain same risk percentage
+                - *Strong Trends:* Can potentially increase size slightly for trades in trend direction
+                - *Choppy Markets:* Reduce size and number of trades
+                
+                Remember that protecting your capital always comes first. A day without trading
+                is better than a day with significant losses.
+                """)
+                
+        # Show trading active status
+        daily_loss_limit_hit, _ = risk_manager.check_daily_loss_limit()
+        max_positions_reached = risk_manager.check_max_positions()
+        
+        if daily_loss_limit_hit:
+            st.error("🛑 Day Trading Halted: Daily loss limit reached")
+        elif max_positions_reached:
+            st.warning("⚠️ Warning: Maximum number of positions reached")
+        else:
+            st.success("✅ Day Trading Active: Within risk parameters")

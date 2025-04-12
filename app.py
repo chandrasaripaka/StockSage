@@ -1026,8 +1026,11 @@ with tab2:
                     continue
                 
                 # Get strategy name
-                strategy = trades_session.query(Strategy).filter_by(id=trade.strategy_id).first()
-                strategy_name = strategy.name if strategy else "Unknown"
+                strategy_name = "Unknown"
+                if trade.strategy_id is not None:
+                    strategy = trades_session.query(Strategy).filter_by(id=trade.strategy_id).first()
+                    if strategy:
+                        strategy_name = strategy.name
                 
                 # Calculate holding period for closed trades
                 holding_period = ""

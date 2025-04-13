@@ -2589,6 +2589,647 @@ with tabs[2]:
 
 # Tab 4: Intraday Trading - Enhanced day trading and analysis tools
 with tabs[3]:
+    st.header("Trading")
+    st.markdown("Execute trades with our advanced trading tools")
+    
+    # Trading Tabs
+    trading_tabs = st.tabs(["Trade Execution", "Day Trading Robot", "Scalping", "Volatility Breakout"])
+    
+    # Tab 1: Trade Execution - Simple Buy/Sell Interface
+    with trading_tabs[0]:
+        st.subheader("Trade Execution")
+        st.markdown("Enter a symbol and execute trades")
+        
+        # Symbol input and quote
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            symbol = st.text_input("Symbol", "AAPL", key="trading_symbol")
+            get_quote = st.button("Get Quote")
+            
+            if get_quote or symbol:
+                try:
+                    ticker = yf.Ticker(symbol)
+                    info = ticker.info
+                    
+                    current_price = info.get('regularMarketPrice', 0)
+                    prev_close = info.get('previousClose', current_price)
+                    change = current_price - prev_close
+                    change_percent = (change / prev_close) * 100 if prev_close > 0 else 0
+                    
+                    company_name = info.get('shortName', symbol)
+                    
+                    st.markdown(f"""
+                    ### {company_name} ({symbol})
+                    **Price:** ${current_price:.2f}  
+                    **Change:** <span style="color:{'green' if change >= 0 else 'red'}">{'+' if change >= 0 else ''}{change:.2f} ({'+' if change_percent >= 0 else ''}{change_percent:.2f}%)</span>
+                    """, unsafe_allow_html=True)
+                    
+                    # Quick stats
+                    st.markdown("### Quick Stats")
+                    stats_cols = st.columns(2)
+                    
+                    with stats_cols[0]:
+                        st.metric("Volume", f"{info.get('volume', 0):,}")
+                        st.metric("Market Cap", f"${info.get('marketCap', 0)/1000000000:.2f}B")
+                    
+                    with stats_cols[1]:
+                        st.metric("Day Range", f"${info.get('dayLow', 0):.2f} - ${info.get('dayHigh', 0):.2f}")
+                        st.metric("52W Range", f"${info.get('fiftyTwoWeekLow', 0):.2f} - ${info.get('fiftyTwoWeekHigh', 0):.2f}")
+                except Exception as e:
+                    st.error(f"Error retrieving data for {symbol}: {str(e)}")
+        
+        with col2:
+            st.subheader("Trading Panel")
+            
+            # Account info
+            st.markdown(f"**Balance:** ${st.session_state.virtual_balance:.2f}")
+            if symbol in st.session_state.portfolio:
+                st.markdown(f"**Shares Owned:** {st.session_state.portfolio[symbol]['quantity']}")
+                st.markdown(f"**Average Price:** ${st.session_state.portfolio[symbol]['price']:.2f}")
+            
+            # Trade form
+            with st.form(key="trading_form"):
+                action = st.radio("Action", ["BUY", "SELL"])
+                
+                # Quantity input
+                max_quantity = 1000
+                if action == "SELL" and symbol in st.session_state.portfolio:
+                    max_quantity = st.session_state.portfolio[symbol]['quantity']
+                
+                quantity = st.number_input(
+                    "Quantity", 
+                    min_value=0.01, 
+                    max_value=float(max_quantity),
+                    step=0.01,
+                    format="%.2f"
+                )
+                
+                # Order type options
+                order_type = st.selectbox("Order Type", ["Market", "Limit"])
+                
+                price = 0
+                try:
+                    ticker = yf.Ticker(symbol)
+                    price = ticker.info.get('regularMarketPrice', 0)
+                except:
+                    pass
+                    
+                if order_type == "Limit":
+                    price = st.number_input(
+                        "Limit Price", 
+                        min_value=0.01,
+                        value=float(price) if price > 0 else 100.0,
+                        step=0.01,
+                        format="%.2f"
+                    )
+                
+                # Calculate total
+                total = quantity * price
+                st.markdown(f"**Total: ${total:.2f}**")
+                
+                # Submit button
+                submitted = st.form_submit_button("Execute Trade")
+                
+                if submitted:
+                    # Validate trade
+                    if action == "BUY" and total > st.session_state.virtual_balance:
+                        st.error(f"Insufficient funds. Trade requires ${total:.2f} but your balance is ${st.session_state.virtual_balance:.2f}")
+                    elif action == "SELL" and (symbol not in st.session_state.portfolio or quantity > st.session_state.portfolio[symbol]['quantity']):
+                        st.error(f"Insufficient shares. You own {st.session_state.portfolio.get(symbol, {}).get('quantity', 0)} shares but are trying to sell {quantity}")
+                    elif execute_trade(symbol, action, quantity, price):
+                        st.success(f"Successfully {action.lower()}ed {quantity} shares of {symbol} at ${price:.2f}")
+                        st.rerun()
+    
+    # Tab 2: Day Trading Robot
+    with trading_tabs[1]:
+        st.subheader("Day Trading Robot")
+        st.markdown("Configure and run an automated day trading strategy")
+        
+        # Strategy configuration
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.markdown("### Strategy Configuration")
+            
+            strategy_symbol = st.text_input("Symbol", "AAPL", key="robot_symbol")
+            strategy_type = st.selectbox("Strategy Type", ["Scalping", "Volatility Breakout", "VWAP Reversion", "Moving Average Crossover"])
+            
+            st.markdown("### Risk Management")
+            max_position = st.slider("Max Position Size ($)", 100, 10000, 1000, 100)
+            stop_loss_pct = st.slider("Stop Loss (%)", 0.5, 5.0, 1.0, 0.1)
+            take_profit_pct = st.slider("Take Profit (%)", 0.5, 5.0, 2.0, 0.1)
+            
+        with col2:
+            st.markdown("### Strategy Parameters")
+            
+            # Different parameters based on strategy type
+            if strategy_type == "Scalping":
+                ema_period = st.slider("EMA Period", 5, 20, 9)
+                volume_threshold = st.slider("Volume Threshold", 1.0, 3.0, 1.5, 0.1)
+                price_change_threshold = st.slider("Price Change Threshold (%)", 0.1, 1.0, 0.2, 0.1)
+                momentum_lookback = st.slider("Momentum Lookback (bars)", 3, 15, 5)
+                
+                # Create strategy object for display
+                strategy_params = {
+                    "ema_period": ema_period,
+                    "volume_threshold": volume_threshold,
+                    "price_change_threshold": price_change_threshold,
+                    "momentum_lookback": momentum_lookback
+                }
+                
+            elif strategy_type == "Volatility Breakout":
+                atr_period = st.slider("ATR Period", 5, 30, 14)
+                breakout_factor = st.slider("Breakout Factor", 1.0, 3.0, 1.5, 0.1)
+                volume_filter = st.checkbox("Volume Filter", True)
+                volume_factor = st.slider("Volume Factor", 1.0, 5.0, 2.0, 0.1)
+                
+                # Create strategy object for display
+                strategy_params = {
+                    "atr_period": atr_period,
+                    "breakout_factor": breakout_factor,
+                    "volume_filter": volume_filter,
+                    "volume_factor": volume_factor
+                }
+                
+            elif strategy_type == "VWAP Reversion":
+                vwap_deviation = st.slider("VWAP Deviation", 1.0, 5.0, 2.0, 0.1)
+                rsi_period = st.slider("RSI Period", 5, 30, 14)
+                rsi_oversold = st.slider("RSI Oversold Level", 20, 40, 30)
+                rsi_overbought = st.slider("RSI Overbought Level", 60, 80, 70)
+                
+                # Create strategy object for display
+                strategy_params = {
+                    "vwap_deviation": vwap_deviation,
+                    "rsi_period": rsi_period,
+                    "rsi_oversold": rsi_oversold,
+                    "rsi_overbought": rsi_overbought
+                }
+                
+            else:  # Moving Average Crossover
+                fast_ma = st.slider("Fast MA Period", 5, 50, 9)
+                slow_ma = st.slider("Slow MA Period", 20, 200, 50)
+                ma_type = st.selectbox("MA Type", ["EMA", "SMA"])
+                
+                # Create strategy object for display
+                strategy_params = {
+                    "fast_ma": fast_ma,
+                    "slow_ma": slow_ma,
+                    "ma_type": ma_type
+                }
+        
+        # Start/Stop buttons
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            start_bot = st.button("Start Trading Bot", key="start_robot")
+            if start_bot:
+                # Create strategy instance based on type
+                if strategy_type == "Scalping":
+                    strategy_instance = ScalpingStrategy(
+                        name=f"Scalping_{strategy_symbol}",
+                        symbol=strategy_symbol,
+                        timeframe="1m",
+                        **strategy_params
+                    )
+                elif strategy_type == "Volatility Breakout":
+                    strategy_instance = VolatilityBreakoutStrategy(
+                        name=f"VolBreakout_{strategy_symbol}",
+                        symbol=strategy_symbol,
+                        timeframe="5m",
+                        **strategy_params
+                    )
+                
+                # Store strategy in session state
+                st.session_state.active_bot = {
+                    "strategy_type": strategy_type,
+                    "symbol": strategy_symbol,
+                    "params": strategy_params,
+                    "max_position": max_position,
+                    "stop_loss_pct": stop_loss_pct,
+                    "take_profit_pct": take_profit_pct,
+                    "started_at": datetime.now(),
+                    "trades": []
+                }
+                
+                st.success(f"Started {strategy_type} bot for {strategy_symbol}")
+        
+        with col2:
+            stop_bot = st.button("Stop Trading Bot", key="stop_robot")
+            if stop_bot and "active_bot" in st.session_state:
+                bot_data = st.session_state.active_bot
+                st.success(f"Stopped {bot_data['strategy_type']} bot for {bot_data['symbol']}")
+                
+                # Calculate results
+                if len(bot_data.get('trades', [])) > 0:
+                    profits = [trade['profit'] for trade in bot_data['trades']]
+                    total_profit = sum(profits)
+                    win_rate = len([p for p in profits if p > 0]) / len(profits) * 100
+                    
+                    st.markdown(f"""
+                    ### Bot Results
+                    **Total Trades:** {len(profits)}  
+                    **Win Rate:** {win_rate:.1f}%  
+                    **Total Profit:** ${total_profit:.2f}
+                    """)
+                
+                # Clear the bot
+                st.session_state.pop('active_bot', None)
+        
+        # Show active bot status if running
+        if "active_bot" in st.session_state:
+            bot_data = st.session_state.active_bot
+            running_time = datetime.now() - bot_data['started_at']
+            
+            st.markdown("---")
+            st.markdown(f"""
+            ### Active Bot: {bot_data['strategy_type']} on {bot_data['symbol']}
+            **Running for:** {running_time.seconds // 60} minutes {running_time.seconds % 60} seconds  
+            **Max Position:** ${bot_data['max_position']:.2f}  
+            **Stop Loss:** {bot_data['stop_loss_pct']:.1f}% / **Take Profit:** {bot_data['take_profit_pct']:.1f}%
+            """)
+            
+            # Display parameters
+            st.json(bot_data['params'])
+            
+            # Recent trades table
+            if len(bot_data.get('trades', [])) > 0:
+                st.markdown("### Recent Trades")
+                trades_df = pd.DataFrame(bot_data['trades'][-5:])  # Show last 5 trades
+                st.dataframe(trades_df)
+                
+                # Performance metrics
+                profits = [trade['profit'] for trade in bot_data['trades']]
+                total_profit = sum(profits)
+                win_rate = len([p for p in profits if p > 0]) / len(profits) * 100 if profits else 0
+                
+                metrics_cols = st.columns(3)
+                metrics_cols[0].metric("Total Trades", len(profits))
+                metrics_cols[1].metric("Win Rate", f"{win_rate:.1f}%")
+                metrics_cols[2].metric("Total Profit", f"${total_profit:.2f}")
+    
+    # Tab 3: Scalping Strategy
+    with trading_tabs[2]:
+        st.subheader("Scalping Strategy")
+        st.markdown("Quick in-and-out trades based on short-term price movements")
+        
+        # Setup the scalping backtest
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            scalp_symbol = st.text_input("Symbol", "SPY", key="scalp_symbol")
+            scalp_timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m"], key="scalp_timeframe")
+            scalp_days = st.number_input("Days to Analyze", 1, 10, 3, key="scalp_days")
+        
+        with col2:
+            ema_period = st.slider("EMA Period", 5, 20, 9, key="scalp_ema")
+            volume_threshold = st.slider("Volume Threshold", 1.0, 3.0, 1.5, 0.1, key="scalp_vol")
+            price_change_threshold = st.slider("Price Change Threshold (%)", 0.1, 1.0, 0.2, 0.1, key="scalp_price")
+            momentum_lookback = st.slider("Momentum Lookback (bars)", 3, 15, 5, key="scalp_momentum")
+        
+        # Run backtest button
+        if st.button("Run Scalping Backtest", key="run_scalp"):
+            try:
+                # Create scalping strategy instance
+                scalping = ScalpingStrategy(
+                    name=f"Scalping_{scalp_symbol}",
+                    symbol=scalp_symbol,
+                    timeframe=scalp_timeframe,
+                    ema_period=ema_period,
+                    volume_threshold=volume_threshold,
+                    price_change_threshold=price_change_threshold,
+                    momentum_lookback=momentum_lookback
+                )
+                
+                # Get historical data
+                end_date = datetime.now()
+                start_date = end_date - timedelta(days=scalp_days)
+                
+                data = yf.download(
+                    scalp_symbol, 
+                    start=start_date,
+                    end=end_date,
+                    interval=scalp_timeframe
+                )
+                
+                if data.empty:
+                    st.error(f"No data available for {scalp_symbol} with {scalp_timeframe} timeframe")
+                else:
+                    # Run strategy
+                    signals = scalping.generate_signals(data)
+                    
+                    # Display results
+                    st.markdown("### Scalping Strategy Results")
+                    
+                    # Add signals to dataframe
+                    data['signal'] = signals
+                    
+                    # Calculate returns
+                    data['returns'] = data['Close'].pct_change()
+                    data['strategy_returns'] = data['returns'] * data['signal'].shift(1)
+                    
+                    # Calculate performance metrics
+                    total_trades = len(data[data['signal'] != data['signal'].shift(1)]) // 2
+                    win_rate = len(data[data['strategy_returns'] > 0]) / len(data[data['strategy_returns'] != 0]) * 100 if len(data[data['strategy_returns'] != 0]) > 0 else 0
+                    total_return = (data['strategy_returns'] + 1).cumprod().iloc[-1] - 1 if len(data) > 0 else 0
+                    
+                    # Display metrics
+                    metrics_cols = st.columns(3)
+                    metrics_cols[0].metric("Total Trades", total_trades)
+                    metrics_cols[1].metric("Win Rate", f"{win_rate:.1f}%")
+                    metrics_cols[2].metric("Strategy Return", f"{total_return*100:.2f}%")
+                    
+                    # Plot results
+                    fig = go.Figure()
+                    
+                    # Price chart
+                    fig.add_trace(
+                        go.Candlestick(
+                            x=data.index,
+                            open=data['Open'],
+                            high=data['High'],
+                            low=data['Low'],
+                            close=data['Close'],
+                            name="Price"
+                        )
+                    )
+                    
+                    # Add buy signals
+                    buy_signals = data[data['signal'] == 1]
+                    fig.add_trace(
+                        go.Scatter(
+                            x=buy_signals.index,
+                            y=buy_signals['Low'] * 0.99,  # Place slightly below the candle
+                            mode='markers',
+                            marker=dict(
+                                symbol='triangle-up',
+                                size=10,
+                                color='green'
+                            ),
+                            name="Buy Signal"
+                        )
+                    )
+                    
+                    # Add sell signals
+                    sell_signals = data[data['signal'] == -1]
+                    fig.add_trace(
+                        go.Scatter(
+                            x=sell_signals.index,
+                            y=sell_signals['High'] * 1.01,  # Place slightly above the candle
+                            mode='markers',
+                            marker=dict(
+                                symbol='triangle-down',
+                                size=10,
+                                color='red'
+                            ),
+                            name="Sell Signal"
+                        )
+                    )
+                    
+                    # Update layout
+                    fig.update_layout(
+                        title=f"{scalp_symbol} - Scalping Strategy Backtest",
+                        xaxis_title="Date",
+                        yaxis_title="Price",
+                        height=600,
+                        template="plotly_dark"
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Performance chart
+                    perf_fig = go.Figure()
+                    
+                    # Strategy performance
+                    strategy_perf = (data['strategy_returns'] + 1).cumprod()
+                    buy_hold_perf = (data['returns'] + 1).cumprod()
+                    
+                    perf_fig.add_trace(
+                        go.Scatter(
+                            x=data.index,
+                            y=strategy_perf,
+                            mode='lines',
+                            name="Strategy",
+                            line=dict(color='#1ec26a', width=2)
+                        )
+                    )
+                    
+                    perf_fig.add_trace(
+                        go.Scatter(
+                            x=data.index,
+                            y=buy_hold_perf,
+                            mode='lines',
+                            name="Buy & Hold",
+                            line=dict(color='#5D69B1', width=2, dash='dash')
+                        )
+                    )
+                    
+                    perf_fig.update_layout(
+                        title="Performance Comparison",
+                        xaxis_title="Date",
+                        yaxis_title="Growth of $1",
+                        height=400,
+                        template="plotly_dark"
+                    )
+                    
+                    st.plotly_chart(perf_fig, use_container_width=True)
+                    
+            except Exception as e:
+                st.error(f"Error running scalping backtest: {str(e)}")
+    
+    # Tab 4: Volatility Breakout
+    with trading_tabs[3]:
+        st.subheader("Volatility Breakout Strategy")
+        st.markdown("Trading breakouts from price consolidation periods")
+        
+        # Setup the volatility breakout backtest
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            vb_symbol = st.text_input("Symbol", "QQQ", key="vb_symbol")
+            vb_timeframe = st.selectbox("Timeframe", ["5m", "15m", "30m", "1h"], key="vb_timeframe")
+            vb_days = st.number_input("Days to Analyze", 1, 30, 7, key="vb_days")
+        
+        with col2:
+            atr_period = st.slider("ATR Period", 5, 30, 14, key="vb_atr")
+            breakout_factor = st.slider("Breakout Factor", 1.0, 3.0, 1.5, 0.1, key="vb_factor")
+            volume_filter = st.checkbox("Volume Filter", True, key="vb_vol_filter")
+            volume_factor = st.slider("Volume Factor", 1.0, 5.0, 2.0, 0.1, key="vb_vol_factor")
+        
+        # Run backtest button
+        if st.button("Run Volatility Breakout Backtest", key="run_vb"):
+            try:
+                # Create volatility breakout strategy instance
+                vb_strategy = VolatilityBreakoutStrategy(
+                    name=f"VolBreakout_{vb_symbol}",
+                    symbol=vb_symbol,
+                    timeframe=vb_timeframe,
+                    atr_period=atr_period,
+                    breakout_factor=breakout_factor,
+                    volume_filter=volume_filter,
+                    volume_factor=volume_factor
+                )
+                
+                # Get historical data
+                end_date = datetime.now()
+                start_date = end_date - timedelta(days=vb_days)
+                
+                data = yf.download(
+                    vb_symbol, 
+                    start=start_date,
+                    end=end_date,
+                    interval=vb_timeframe
+                )
+                
+                if data.empty:
+                    st.error(f"No data available for {vb_symbol} with {vb_timeframe} timeframe")
+                else:
+                    # Run strategy
+                    signals = vb_strategy.generate_signals(data)
+                    
+                    # Display results
+                    st.markdown("### Volatility Breakout Strategy Results")
+                    
+                    # Add signals to dataframe
+                    data['signal'] = signals
+                    
+                    # Calculate returns
+                    data['returns'] = data['Close'].pct_change()
+                    data['strategy_returns'] = data['returns'] * data['signal'].shift(1)
+                    
+                    # Calculate performance metrics
+                    total_trades = len(data[data['signal'] != data['signal'].shift(1)]) // 2
+                    win_rate = len(data[data['strategy_returns'] > 0]) / len(data[data['strategy_returns'] != 0]) * 100 if len(data[data['strategy_returns'] != 0]) > 0 else 0
+                    total_return = (data['strategy_returns'] + 1).cumprod().iloc[-1] - 1 if len(data) > 0 else 0
+                    
+                    # Display metrics
+                    metrics_cols = st.columns(3)
+                    metrics_cols[0].metric("Total Trades", total_trades)
+                    metrics_cols[1].metric("Win Rate", f"{win_rate:.1f}%")
+                    metrics_cols[2].metric("Strategy Return", f"{total_return*100:.2f}%")
+                    
+                    # Plot results
+                    fig = go.Figure()
+                    
+                    # Price chart
+                    fig.add_trace(
+                        go.Candlestick(
+                            x=data.index,
+                            open=data['Open'],
+                            high=data['High'],
+                            low=data['Low'],
+                            close=data['Close'],
+                            name="Price"
+                        )
+                    )
+                    
+                    # Add ATR bands if calculated
+                    if 'atr' in data.columns and 'upper_band' in data.columns and 'lower_band' in data.columns:
+                        fig.add_trace(
+                            go.Scatter(
+                                x=data.index,
+                                y=data['upper_band'],
+                                mode='lines',
+                                line=dict(color='rgba(173, 216, 230, 0.5)', width=1),
+                                name="Upper Band"
+                            )
+                        )
+                        
+                        fig.add_trace(
+                            go.Scatter(
+                                x=data.index,
+                                y=data['lower_band'],
+                                mode='lines',
+                                line=dict(color='rgba(173, 216, 230, 0.5)', width=1),
+                                name="Lower Band",
+                                fill='tonexty'
+                            )
+                        )
+                    
+                    # Add buy signals
+                    buy_signals = data[data['signal'] == 1]
+                    fig.add_trace(
+                        go.Scatter(
+                            x=buy_signals.index,
+                            y=buy_signals['Low'] * 0.99,
+                            mode='markers',
+                            marker=dict(
+                                symbol='triangle-up',
+                                size=10,
+                                color='green'
+                            ),
+                            name="Buy Signal"
+                        )
+                    )
+                    
+                    # Add sell signals
+                    sell_signals = data[data['signal'] == -1]
+                    fig.add_trace(
+                        go.Scatter(
+                            x=sell_signals.index,
+                            y=sell_signals['High'] * 1.01,
+                            mode='markers',
+                            marker=dict(
+                                symbol='triangle-down',
+                                size=10,
+                                color='red'
+                            ),
+                            name="Sell Signal"
+                        )
+                    )
+                    
+                    # Update layout
+                    fig.update_layout(
+                        title=f"{vb_symbol} - Volatility Breakout Strategy Backtest",
+                        xaxis_title="Date",
+                        yaxis_title="Price",
+                        height=600,
+                        template="plotly_dark"
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Performance chart
+                    perf_fig = go.Figure()
+                    
+                    # Strategy performance
+                    strategy_perf = (data['strategy_returns'] + 1).cumprod()
+                    buy_hold_perf = (data['returns'] + 1).cumprod()
+                    
+                    perf_fig.add_trace(
+                        go.Scatter(
+                            x=data.index,
+                            y=strategy_perf,
+                            mode='lines',
+                            name="Strategy",
+                            line=dict(color='#1ec26a', width=2)
+                        )
+                    )
+                    
+                    perf_fig.add_trace(
+                        go.Scatter(
+                            x=data.index,
+                            y=buy_hold_perf,
+                            mode='lines',
+                            name="Buy & Hold",
+                            line=dict(color='#5D69B1', width=2, dash='dash')
+                        )
+                    )
+                    
+                    perf_fig.update_layout(
+                        title="Performance Comparison",
+                        xaxis_title="Date",
+                        yaxis_title="Growth of $1",
+                        height=400,
+                        template="plotly_dark"
+                    )
+                    
+                    st.plotly_chart(perf_fig, use_container_width=True)
+                    
+            except Exception as e:
+                st.error(f"Error running volatility breakout backtest: {str(e)}")
+
+with tabs[4]:
     st.header("Day Trading Hub")
     
     # Add a stylish intro banner with key benefits
@@ -4869,7 +5510,7 @@ with tabs[3]:
                     st.success(f"Within daily loss limit: ${current_loss:.2f} / ${max_loss:.2f} ({loss_percentage:.1f}%)")
 
 # Tab 5: Social Feed - Community discussions and trader updates
-with tabs[4]:
+with tabs[5]:
     st.header("Social Feed")
     st.markdown("Connect with other traders and share market insights")
     
@@ -4981,7 +5622,7 @@ with tabs[4]:
                 st.rerun()
 
 # Tab 5: Settings - User preferences and profile settings
-with tabs[4]:
+with tabs[6]:
     st.header("Settings")
     
     # Settings tabs

@@ -3302,7 +3302,7 @@ with tabs[3]:
             )
         
         # Get intraday data
-        if st.button("Analyze Intraday Data", key="analyze_intraday"):
+        if st.button("Analyze Intraday Data", key="analyze_intraday_tab1"):
             try:
                 with st.spinner(f"Analyzing intraday data for {intraday_symbol}..."):
                     # Get intraday data
@@ -4078,7 +4078,7 @@ with tabs[3]:
             )
         
         # Get intraday data
-        if st.button("Analyze Intraday Data", key="analyze_intraday"):
+        if st.button("Analyze Intraday Data", key="analyze_intraday_tab0"):
             try:
                 with st.spinner(f"Analyzing intraday data for {intraday_symbol}..."):
                     # Get intraday data

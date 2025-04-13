@@ -3290,7 +3290,7 @@ with tabs[3]:
                 "Time Interval",
                 ["1m", "5m", "15m", "30m", "60m"],
                 index=1,  # Default to 5m
-                key="intraday_interval"
+                key="intraday_tab1_interval"
             )
         
         with col2:
@@ -3298,7 +3298,7 @@ with tabs[3]:
                 "Lookback Period",
                 [1, 2, 3, 5, 10],
                 index=0,  # Default to 1 day
-                key="intraday_lookback"
+                key="intraday_tab1_lookback"
             )
         
         # Get intraday data
@@ -4066,7 +4066,7 @@ with tabs[3]:
                 "Time Interval",
                 ["1m", "5m", "15m", "30m", "60m"],
                 index=1,  # Default to 5m
-                key="intraday_interval"
+                key="intraday_tab0_interval"
             )
         
         with col2:
@@ -4074,7 +4074,7 @@ with tabs[3]:
                 "Lookback Period",
                 [1, 2, 3, 5, 10],
                 index=0,  # Default to 1 day
-                key="intraday_lookback"
+                key="intraday_tab0_lookback"
             )
         
         # Get intraday data

@@ -2794,15 +2794,37 @@ with tabs[3]:
         <div style="display: flex; flex-wrap: nowrap; overflow-x: auto; margin: 20px 0; width: 100%;">
         """
         
-        for i, hour in enumerate(range(24)):
+        for hour in range(24):
             # Determine segment type
             if hour >= 4 and hour < 9:
                 segment_type = "pre-market"
                 bg_color = "#2c3154"
-            elif hour == 9 and i < 30:
-                segment_type = "pre-market"
-                bg_color = "#2c3154"
-            elif hour >= 9 and hour < 16:
+            elif hour == 9:
+                # Split the 9 AM hour into two segments: pre-market (9:00-9:30) and regular (9:30-10:00)
+                # We'll create two half-width cells for 9 AM
+                pre_market_html = f"""
+                <div style="flex: 0.5; text-align: center; padding: 10px 5px; background-color: #2c3154; 
+                            border: {border if hour == current_hour else "1px solid rgba(255,255,255,0.1)"}; 
+                            border-radius: 5px; margin: 0 2px; min-width: 50px; 
+                            font-weight: {font_weight if hour == current_hour else "normal"};">
+                    9:00 AM
+                    <div style="font-size: 0.8em;">Pre Market</div>
+                </div>
+                """
+                
+                regular_html = f"""
+                <div style="flex: 0.5; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
+                            border: {border if hour == current_hour and now.minute >= 30 else "1px solid rgba(255,255,255,0.1)"}; 
+                            border-radius: 5px; margin: 0 2px; min-width: 50px; 
+                            font-weight: {font_weight if hour == current_hour and now.minute >= 30 else "normal"};">
+                    9:30 AM
+                    <div style="font-size: 0.8em;">Regular Hours</div>
+                </div>
+                """
+                
+                timeline_html += pre_market_html + regular_html
+                continue
+            elif hour > 9 and hour < 16:
                 segment_type = "regular"
                 bg_color = "#1e4e37"
             elif hour >= 16 and hour < 20:
@@ -2820,11 +2842,8 @@ with tabs[3]:
                 border = "1px solid rgba(255,255,255,0.1)"
                 font_weight = "normal"
             
-            # Adjust for 9:30 AM (regular market open)
-            if hour == 9:
-                hour_display = "9:30 AM" if segment_type == "regular" else "9 AM"
-            else:
-                hour_display = hour_labels[hour]
+            # Use standard hour display for all hours except 9 AM which is handled separately
+            hour_display = hour_labels[hour]
                 
             # Add segment to timeline
             timeline_html += f"""

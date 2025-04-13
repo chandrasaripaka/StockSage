@@ -8,7 +8,7 @@ deploymentTarget = "autoscale"
 run = ["streamlit", "run", "app.py", "--server.port", "5000"]
 
 [workflows]
-runButton = "Streamlit Server"
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -31,11 +31,12 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py --server.port 5000"
+args = "streamlit run app_etoro.py --server.port 5000"
 waitForPort = 5000
 
 [[ports]]
 localPort = 5000
+externalPort = 80
 
 [objectStorage]
 defaultBucketID = "replit-objstore-5c262714-5443-4a95-9968-807ec6df7a82"

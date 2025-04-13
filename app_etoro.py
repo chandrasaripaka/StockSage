@@ -570,7 +570,7 @@ st.title("TradeCopy - Social Trading Platform")
 st.markdown("Invest smartly by following top traders and building your portfolio")
 
 # Main navigation
-tabs = st.tabs(["Discover", "Markets", "Portfolio", "Intraday Trading", "Social Feed", "Settings"])
+tabs = st.tabs(["Discover", "Markets", "Portfolio", "Trading", "Intraday Trading", "Social Feed", "Settings"])
 
 # Tab 1: Discover - Find and copy top traders
 with tabs[0]:

@@ -9,6 +9,7 @@ dependencies = [
     "plotly>=6.0.1",
     "psycopg2-binary>=2.9.10",
     "pytz>=2025.2",
+    "scipy>=1.15.2",
     "sqlalchemy>=2.0.40",
     "streamlit>=1.44.1",
     "tigeropen>=3.3.5",

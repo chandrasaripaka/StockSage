@@ -2800,13 +2800,33 @@ with tabs[3]:
                 segment_type = "pre-market"
                 bg_color = "#2c3154"
             elif hour == 9:
+                # Initialize border and font weight variables for 9 AM hour
+                if hour == current_hour:
+                    pre_market_border = "2px solid white"
+                    pre_market_font_weight = "bold"
+                    
+                    # Additional check for 9:30 AM (regular hours start)
+                    if now.minute >= 30:
+                        regular_hours_border = "2px solid white"
+                        regular_hours_font_weight = "bold"
+                        pre_market_border = "1px solid rgba(255,255,255,0.1)"
+                        pre_market_font_weight = "normal"
+                    else:
+                        regular_hours_border = "1px solid rgba(255,255,255,0.1)"
+                        regular_hours_font_weight = "normal"
+                else:
+                    pre_market_border = "1px solid rgba(255,255,255,0.1)"
+                    pre_market_font_weight = "normal"
+                    regular_hours_border = "1px solid rgba(255,255,255,0.1)"
+                    regular_hours_font_weight = "normal"
+                
                 # Split the 9 AM hour into two segments: pre-market (9:00-9:30) and regular (9:30-10:00)
                 # We'll create two half-width cells for 9 AM
                 pre_market_html = f"""
                 <div style="flex: 0.5; text-align: center; padding: 10px 5px; background-color: #2c3154; 
-                            border: {border if hour == current_hour else "1px solid rgba(255,255,255,0.1)"}; 
+                            border: {pre_market_border}; 
                             border-radius: 5px; margin: 0 2px; min-width: 50px; 
-                            font-weight: {font_weight if hour == current_hour else "normal"};">
+                            font-weight: {pre_market_font_weight};">
                     9:00 AM
                     <div style="font-size: 0.8em;">Pre Market</div>
                 </div>
@@ -2814,9 +2834,9 @@ with tabs[3]:
                 
                 regular_html = f"""
                 <div style="flex: 0.5; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
-                            border: {border if hour == current_hour and now.minute >= 30 else "1px solid rgba(255,255,255,0.1)"}; 
+                            border: {regular_hours_border}; 
                             border-radius: 5px; margin: 0 2px; min-width: 50px; 
-                            font-weight: {font_weight if hour == current_hour and now.minute >= 30 else "normal"};">
+                            font-weight: {regular_hours_font_weight};">
                     9:30 AM
                     <div style="font-size: 0.8em;">Regular Hours</div>
                 </div>
@@ -2844,7 +2864,7 @@ with tabs[3]:
             
             # Use standard hour display for all hours except 9 AM which is handled separately
             hour_display = hour_labels[hour]
-                
+            
             # Add segment to timeline
             timeline_html += f"""
             <div style="flex: 1; text-align: center; padding: 10px 5px; background-color: {bg_color}; 

@@ -3281,7 +3281,7 @@ with tabs[3]:
         st.subheader("Intraday Price Action Analysis")
         
         # Symbol selection
-        intraday_symbol = st.text_input("Symbol", value="AAPL", key="intraday_symbol")
+        intraday_symbol = st.text_input("Symbol", value="AAPL", key="intraday_tab1_symbol")
         
         # Time interval selection
         col1, col2 = st.columns(2)
@@ -4057,7 +4057,7 @@ with tabs[3]:
         st.subheader("Intraday Price Action Analysis")
         
         # Symbol selection
-        intraday_symbol = st.text_input("Symbol", value="AAPL", key="intraday_symbol")
+        intraday_symbol = st.text_input("Symbol", value="AAPL", key="intraday_tab0_symbol")
         
         # Time interval selection
         col1, col2 = st.columns(2)

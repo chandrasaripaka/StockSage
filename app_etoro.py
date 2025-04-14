@@ -3420,103 +3420,106 @@ with tabs[4]:
         # Market hours visualization
         st.markdown("### Market Hours")
         
-        # Create a visual representation of market hours
-        hour_labels = [
-            "12 AM", "1 AM", "2 AM", "3 AM", "4 AM", "5 AM", "6 AM", "7 AM", "8 AM", "9 AM", 
-            "10 AM", "11 AM", "12 PM", "1 PM", "2 PM", "3 PM", "4 PM", "5 PM", "6 PM", "7 PM", 
-            "8 PM", "9 PM", "10 PM", "11 PM"
+        # Create a simplified market hours widget that's more reliable
+        # Define the different time segments
+        segments = [
+            {"label": "Pre-Market", "start": 4, "end": 9.5, "color": "#2c3154", "text_color": "white"},
+            {"label": "Regular Hours", "start": 9.5, "end": 16, "color": "#1e4e37", "text_color": "white"},
+            {"label": "After Hours", "start": 16, "end": 20, "color": "#4e351e", "text_color": "white"},
+            {"label": "Closed", "start": 20, "end": 28, "color": "#2a2a2a", "text_color": "#aaaaaa"} # End at 28 to wrap to 4am next day
         ]
         
-        # Determine current hour for highlighting
-        current_hour = now.hour
+        # Current hour in Eastern time
+        current_hour = now.hour + (now.minute / 60)
         
-        # Create timeline HTML
-        timeline_html = f"""
-        <div style="display: flex; flex-wrap: nowrap; overflow-x: auto; margin: 20px 0; width: 100%;">
+        # Create the HTML for the timeline
+        market_hours_html = """
+        <div style="display: flex; flex-wrap: nowrap; overflow-x: auto; margin: 10px 0; padding-bottom: 10px; width: 100%;">
         """
         
+        # Add each hour to the timeline
         for hour in range(24):
+            hour_float = hour + 0.0
+            display_hour = hour % 12
+            if display_hour == 0:
+                display_hour = 12
+            am_pm = "AM" if hour < 12 else "PM"
+            hour_label = f"{display_hour} {am_pm}"
+            
             # Determine segment type
-            if hour >= 4 and hour < 9:
-                segment_type = "pre-market"
-                bg_color = "#2c3154"
-            elif hour == 9:
-                # Initialize border and font weight variables for 9 AM hour
-                if hour == current_hour:
+            segment_type = "Closed"
+            bg_color = "#2a2a2a"
+            text_color = "#aaaaaa"
+            
+            for segment in segments:
+                start_hour = segment["start"]
+                end_hour = segment["end"]
+                
+                # Handle wrapping around midnight
+                if end_hour > 24:
+                    if hour_float < (end_hour - 24) or hour_float >= start_hour:
+                        segment_type = segment["label"]
+                        bg_color = segment["color"]
+                        text_color = segment["text_color"]
+                        break
+                elif hour_float >= start_hour and hour_float < end_hour:
+                    segment_type = segment["label"]
+                    bg_color = segment["color"]
+                    text_color = segment["text_color"]
+                    break
+            
+            # Handle the 9:00-9:30 AM split cell
+            if hour == 9:
+                # Pre-market portion (9:00-9:30 AM)
+                pre_market_border = "1px solid rgba(255,255,255,0.1)"
+                pre_market_font_weight = "normal"
+                if current_hour >= 9 and current_hour < 9.5:
                     pre_market_border = "2px solid white"
                     pre_market_font_weight = "bold"
-                    
-                    # Additional check for 9:30 AM (regular hours start)
-                    if now.minute >= 30:
-                        regular_hours_border = "2px solid white"
-                        regular_hours_font_weight = "bold"
-                        pre_market_border = "1px solid rgba(255,255,255,0.1)"
-                        pre_market_font_weight = "normal"
-                    else:
-                        regular_hours_border = "1px solid rgba(255,255,255,0.1)"
-                        regular_hours_font_weight = "normal"
-                else:
-                    pre_market_border = "1px solid rgba(255,255,255,0.1)"
-                    pre_market_font_weight = "normal"
-                    regular_hours_border = "1px solid rgba(255,255,255,0.1)"
-                    regular_hours_font_weight = "normal"
                 
-                # Split the 9 AM hour into two segments: pre-market (9:00-9:30) and regular (9:30-10:00)
-                # We'll create two half-width cells for 9 AM
-                pre_market_html = f"""
+                # Regular hours portion (9:30-10:00 AM)
+                regular_hours_border = "1px solid rgba(255,255,255,0.1)"
+                regular_hours_font_weight = "normal"
+                if current_hour >= 9.5 and current_hour < 10:
+                    regular_hours_border = "2px solid white"
+                    regular_hours_font_weight = "bold"
+                
+                # Add the split cell
+                market_hours_html += f"""
                 <div style="flex: 0.5; text-align: center; padding: 10px 5px; background-color: #2c3154; 
-                            border: {pre_market_border}; 
-                            border-radius: 5px; margin: 0 2px; min-width: 50px; 
-                            font-weight: {pre_market_font_weight};">
+                            border: {pre_market_border}; border-radius: 5px; margin: 0 2px; min-width: 50px; 
+                            font-weight: {pre_market_font_weight}; color: white;">
                     9:00 AM
                     <div style="font-size: 0.8em;">Pre Market</div>
                 </div>
-                """
-                
-                regular_html = f"""
                 <div style="flex: 0.5; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
-                            border: {regular_hours_border}; 
-                            border-radius: 5px; margin: 0 2px; min-width: 50px; 
-                            font-weight: {regular_hours_font_weight};">
+                            border: {regular_hours_border}; border-radius: 5px; margin: 0 2px; min-width: 50px; 
+                            font-weight: {regular_hours_font_weight}; color: white;">
                     9:30 AM
                     <div style="font-size: 0.8em;">Regular Hours</div>
                 </div>
                 """
-                
-                timeline_html += pre_market_html + regular_html
                 continue
-            elif hour > 9 and hour < 16:
-                segment_type = "regular"
-                bg_color = "#1e4e37"
-            elif hour >= 16 and hour < 20:
-                segment_type = "after-hours"
-                bg_color = "#4e351e"
-            else:
-                segment_type = "closed"
-                bg_color = "#2a2a2a"
             
             # Highlight current hour
-            if hour == current_hour:
+            border = "1px solid rgba(255,255,255,0.1)"
+            font_weight = "normal"
+            if hour == int(current_hour) and (hour != 9 or (current_hour >= 10)):
                 border = "2px solid white"
                 font_weight = "bold"
-            else:
-                border = "1px solid rgba(255,255,255,0.1)"
-                font_weight = "normal"
             
-            # Use standard hour display for all hours except 9 AM which is handled separately
-            hour_display = hour_labels[hour]
-            
-            # Add segment to timeline
-            timeline_html += f"""
+            # Add the hour cell
+            market_hours_html += f"""
             <div style="flex: 1; text-align: center; padding: 10px 5px; background-color: {bg_color}; 
-                        border: {border}; border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: {font_weight};">
-                {hour_display}
-                <div style="font-size: 0.8em;">{segment_type.replace('-', ' ').title()}</div>
+                       border: {border}; border-radius: 5px; margin: 0 2px; min-width: 70px; 
+                       font-weight: {font_weight}; color: {text_color};">
+                {hour_label}
+                <div style="font-size: 0.8em;">{segment_type}</div>
             </div>
             """
         
-        timeline_html += "</div>"
-        st.markdown(timeline_html, unsafe_allow_html=True)
+        market_hours_html += "</div>"
+        st.markdown(market_hours_html, unsafe_allow_html=True)
         
         # Add legend
         st.markdown("""

@@ -3438,9 +3438,65 @@ with tabs[4]:
         # Current hour in Eastern time
         current_hour = now.hour + (now.minute / 60)
         
-        # Create the HTML for the timeline
-        market_hours_html = """
-        <div style="display: flex; flex-wrap: nowrap; overflow-x: auto; margin: 10px 0; padding-bottom: 10px; width: 100%;">"""
+        # Create the HTML for the timeline using a cleaner structure with CSS classes
+        # First, define CSS for the market hours timeline
+        st.markdown("""
+        <style>
+            .market-timeline {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                margin: 10px 0;
+                padding-bottom: 10px;
+                width: 100%;
+            }
+            .hour-cell {
+                flex: 1;
+                text-align: center;
+                padding: 10px 5px;
+                border-radius: 5px;
+                margin: 0 2px;
+                min-width: 70px;
+            }
+            .hour-cell.current {
+                border: 2px solid white;
+                font-weight: bold;
+            }
+            .hour-cell.regular {
+                background-color: #1e4e37;
+                color: white;
+            }
+            .hour-cell.pre-market {
+                background-color: #2c3154;
+                color: white;
+            }
+            .hour-cell.after-hours {
+                background-color: #4e351e;
+                color: white;
+            }
+            .hour-cell.closed {
+                background-color: #2a2a2a;
+                color: #aaaaaa;
+            }
+            .hour-label {
+                font-size: 1em;
+            }
+            .segment-label {
+                font-size: 0.8em;
+            }
+            .split-cell {
+                flex: 0.5;
+                text-align: center;
+                padding: 10px 5px;
+                border-radius: 5px;
+                margin: 0 2px;
+                min-width: 50px;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Start building the HTML
+        market_hours_html = '<div class="market-timeline">'
         
         # Add each hour to the timeline
         for hour in range(24):
@@ -3453,8 +3509,7 @@ with tabs[4]:
             
             # Determine segment type
             segment_type = "Closed"
-            bg_color = "#2a2a2a"
-            text_color = "#aaaaaa"
+            segment_class = "closed"
             
             for segment in segments:
                 start_hour = segment["start"]
@@ -3464,87 +3519,100 @@ with tabs[4]:
                 if end_hour > 24:
                     if hour_float < (end_hour - 24) or hour_float >= start_hour:
                         segment_type = segment["label"]
-                        bg_color = segment["color"]
-                        text_color = segment["text_color"]
                         break
                 elif hour_float >= start_hour and hour_float < end_hour:
                     segment_type = segment["label"]
-                    bg_color = segment["color"]
-                    text_color = segment["text_color"]
                     break
+            
+            # Map segment type to CSS class
+            if segment_type == "Regular Hours":
+                segment_class = "regular"
+                display_segment_type = "Regular Hours"
+            elif segment_type == "Pre-Market":
+                segment_class = "pre-market"
+                display_segment_type = "Pre Market"
+            elif segment_type == "After Hours":
+                segment_class = "after-hours"
+                display_segment_type = "After Hours"
+            else:
+                segment_class = "closed"
+                display_segment_type = "Closed"
             
             # Handle the 9:00-9:30 AM split cell
             if hour == 9:
                 # Pre-market portion (9:00-9:30 AM)
-                pre_market_border = "1px solid rgba(255,255,255,0.1)"
-                pre_market_font_weight = "normal"
+                pre_market_class = "split-cell pre-market"
                 if current_hour >= 9 and current_hour < 9.5:
-                    pre_market_border = "2px solid white"
-                    pre_market_font_weight = "bold"
+                    pre_market_class += " current"
                 
                 # Regular hours portion (9:30-10:00 AM)
-                regular_hours_border = "1px solid rgba(255,255,255,0.1)"
-                regular_hours_font_weight = "normal"
+                regular_hours_class = "split-cell regular"
                 if current_hour >= 9.5 and current_hour < 10:
-                    regular_hours_border = "2px solid white"
-                    regular_hours_font_weight = "bold"
+                    regular_hours_class += " current"
                 
                 # Add the split cell
                 market_hours_html += f"""
-                <div style="flex: 0.5; text-align: center; padding: 10px 5px; background-color: #2c3154; 
-                            border: {pre_market_border}; border-radius: 5px; margin: 0 2px; min-width: 50px; 
-                            font-weight: {pre_market_font_weight}; color: white;">
-                    9:00 AM
-                    <div style="font-size: 0.8em;">Pre Market</div>
+                <div class="{pre_market_class}">
+                    <div class="hour-label">9:00 AM</div>
+                    <div class="segment-label">Pre Market</div>
                 </div>
-                <div style="flex: 0.5; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
-                            border: {regular_hours_border}; border-radius: 5px; margin: 0 2px; min-width: 50px; 
-                            font-weight: {regular_hours_font_weight}; color: white;">
-                    9:30 AM
-                    <div style="font-size: 0.8em;">Regular Hours</div>
+                <div class="{regular_hours_class}">
+                    <div class="hour-label">9:30 AM</div>
+                    <div class="segment-label">Regular Hours</div>
                 </div>
                 """
                 continue
             
-            # Highlight current hour
-            border = "1px solid rgba(255,255,255,0.1)"
-            font_weight = "normal"
+            # Determine if this is the current hour
+            current_class = ""
             if hour == int(current_hour) and (hour != 9 or (current_hour >= 10)):
-                border = "2px solid white"
-                font_weight = "bold"
+                current_class = " current"
             
-            # Add the hour cell
-            
-            # Make consistent naming for the segments
-            display_segment_type = segment_type
-            if segment_type == "Regular Hours":
-                display_segment_type = "Regular Hours"
-            elif segment_type == "Pre-Market":
-                display_segment_type = "Pre Market"
-            elif segment_type == "After Hours":
-                display_segment_type = "After Hours"
-            else:
-                display_segment_type = "Closed"
-                
-            market_hours_html += f"""<div>
-            <div style="flex: 1; text-align: center; padding: 10px 5px; background-color: {bg_color}; 
-                       border: {border}; border-radius: 5px; margin: 0 2px; min-width: 70px; 
-                       font-weight: {font_weight}; color: {text_color};">
-                {hour_label}
-                <div style="font-size: 0.8em;">{display_segment_type}</div>
+            # Add the hour cell with clean CSS classes
+            market_hours_html += f"""
+            <div class="hour-cell {segment_class}{current_class}">
+                <div class="hour-label">{hour_label}</div>
+                <div class="segment-label">{display_segment_type}</div>
             </div>
             """
         
-        #market_hours_html += "</div>"
+        market_hours_html += "</div>"
         st.markdown(market_hours_html, unsafe_allow_html=True)
         
-        # Add legend
+        # Add legend with CSS classes
         st.markdown("""
-        <div style="display: flex; margin-top: 5px; font-size: 0.9em;">
-            <div style="margin-right: 15px;"><span style="background-color: #1e4e37; padding: 2px 8px; border-radius: 3px;">Regular Hours</span></div>
-            <div style="margin-right: 15px;"><span style="background-color: #2c3154; padding: 2px 8px; border-radius: 3px;">Pre Market</span></div>
-            <div style="margin-right: 15px;"><span style="background-color: #4e351e; padding: 2px 8px; border-radius: 3px;">After Hours</span></div>
-            <div><span style="background-color: #2a2a2a; padding: 2px 8px; border-radius: 3px;">Closed</span></div>
+        <style>
+            .market-legend {
+                display: flex;
+                margin-top: 5px;
+                font-size: 0.9em;
+            }
+            .legend-item {
+                margin-right: 15px;
+            }
+            .legend-label {
+                padding: 2px 8px;
+                border-radius: 3px;
+                color: white;
+            }
+            .legend-regular {
+                background-color: #1e4e37;
+            }
+            .legend-pre-market {
+                background-color: #2c3154;
+            }
+            .legend-after-hours {
+                background-color: #4e351e;
+            }
+            .legend-closed {
+                background-color: #2a2a2a;
+            }
+        </style>
+        <div class="market-legend">
+            <div class="legend-item"><span class="legend-label legend-regular">Regular Hours</span></div>
+            <div class="legend-item"><span class="legend-label legend-pre-market">Pre Market</span></div>
+            <div class="legend-item"><span class="legend-label legend-after-hours">After Hours</span></div>
+            <div class="legend-item"><span class="legend-label legend-closed">Closed</span></div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -3638,19 +3706,76 @@ with tabs[4]:
         
         with movers_tabs[0]:
             if gainers:
-                # Create cards for top gainers
+                # First, define CSS once for all stock cards
+                if 'stock_cards_css_added' not in st.session_state:
+                    st.markdown("""
+                    <style>
+                        .stock-card {
+                            background-color: #1e2138;
+                            border-radius: 5px;
+                            padding: 10px;
+                            margin-bottom: 10px;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        }
+                        .stock-card.gainer {
+                            border-left: 3px solid green;
+                        }
+                        .stock-card.loser {
+                            border-left: 3px solid red;
+                        }
+                        .stock-card.volume {
+                            border-left: 3px solid orange;
+                        }
+                        .stock-info {
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        .stock-name {
+                            font-weight: bold;
+                            font-size: 16px;
+                        }
+                        .stock-price {
+                            font-size: 14px;
+                        }
+                        .change-positive {
+                            color: green;
+                            font-weight: bold;
+                            font-size: 18px;
+                        }
+                        .change-negative {
+                            color: red;
+                            font-weight: bold;
+                            font-size: 18px;
+                        }
+                        .volume-indicator {
+                            color: orange;
+                            font-size: 14px;
+                        }
+                        .trade-button {
+                            background-color: #1ec26a;
+                            color: white;
+                            border: none;
+                            padding: 5px 15px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                        }
+                    </style>
+                    """, unsafe_allow_html=True)
+                    st.session_state.stock_cards_css_added = True
+                
+                # Create cards for top gainers using CSS classes
                 for i, stock in enumerate(gainers):
                     st.markdown(f"""
-                    <div style="background-color: #1e2138; border-radius: 5px; padding: 10px; margin-bottom: 10px; 
-                                border-left: 3px solid green; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-weight: bold; font-size: 16px;">{stock['Symbol']} - {stock['Name']}</div>
-                            <div>${stock['Price']:.2f}</div>
+                    <div class="stock-card gainer">
+                        <div class="stock-info">
+                            <div class="stock-name">{stock['Symbol']} - {stock['Name']}</div>
+                            <div class="stock-price">${stock['Price']:.2f}</div>
                         </div>
-                        <div style="color: green; font-weight: bold; font-size: 18px;">+{stock['Change%']:.2f}%</div>
+                        <div class="change-positive">+{stock['Change%']:.2f}%</div>
                         <div>
-                            <button style="background-color: #1ec26a; color: white; border: none; padding: 5px 15px; border-radius: 5px;"
-                                    onclick="null">Trade</button>
+                            <button class="trade-button" onclick="null">Trade</button>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -3715,19 +3840,17 @@ with tabs[4]:
         
         with movers_tabs[1]:
             if losers:
-                # Create cards for top losers
+                # Create cards for top losers using CSS classes
                 for i, stock in enumerate(losers):
                     st.markdown(f"""
-                    <div style="background-color: #1e2138; border-radius: 5px; padding: 10px; margin-bottom: 10px; 
-                                border-left: 3px solid red; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-weight: bold; font-size: 16px;">{stock['Symbol']} - {stock['Name']}</div>
-                            <div>${stock['Price']:.2f}</div>
+                    <div class="stock-card loser">
+                        <div class="stock-info">
+                            <div class="stock-name">{stock['Symbol']} - {stock['Name']}</div>
+                            <div class="stock-price">${stock['Price']:.2f}</div>
                         </div>
-                        <div style="color: red; font-weight: bold; font-size: 18px;">{stock['Change%']:.2f}%</div>
+                        <div class="change-negative">{stock['Change%']:.2f}%</div>
                         <div>
-                            <button style="background-color: #1ec26a; color: white; border: none; padding: 5px 15px; border-radius: 5px;"
-                                    onclick="null">Trade</button>
+                            <button class="trade-button" onclick="null">Trade</button>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -3787,25 +3910,23 @@ with tabs[4]:
         
         with movers_tabs[2]:
             if high_volume:
-                # Create cards for high volume stocks
+                # Create cards for high volume stocks using CSS classes
                 for i, stock in enumerate(high_volume):
-                    vol_color = "orange"
-                    change_color = "green" if stock['Change%'] >= 0 else "red"
+                    change_class = "change-positive" if stock['Change%'] >= 0 else "change-negative"
+                    change_prefix = "+" if stock['Change%'] >= 0 else ""
                     
                     st.markdown(f"""
-                    <div style="background-color: #1e2138; border-radius: 5px; padding: 10px; margin-bottom: 10px; 
-                                border-left: 3px solid {vol_color}; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-weight: bold; font-size: 16px;">{stock['Symbol']} - {stock['Name']}</div>
-                            <div>${stock['Price']:.2f}</div>
+                    <div class="stock-card volume">
+                        <div class="stock-info">
+                            <div class="stock-name">{stock['Symbol']} - {stock['Name']}</div>
+                            <div class="stock-price">${stock['Price']:.2f}</div>
                         </div>
                         <div>
-                            <div style="color: {change_color}; font-weight: bold;">{'+' if stock['Change%'] >= 0 else ''}{stock['Change%']:.2f}%</div>
-                            <div style="color: {vol_color};">{stock['Volume Ratio']:.1f}x volume</div>
+                            <div class="{change_class}">{change_prefix}{stock['Change%']:.2f}%</div>
+                            <div class="volume-indicator">{stock['Volume Ratio']:.1f}x volume</div>
                         </div>
                         <div>
-                            <button style="background-color: #1ec26a; color: white; border: none; padding: 5px 15px; border-radius: 5px;"
-                                    onclick="null">Trade</button>
+                            <button class="trade-button" onclick="null">Trade</button>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -3918,26 +4039,62 @@ with tabs[4]:
                         change_color = "green" if item['Change'] >= 0 else "red"
                         change_icon = "▲" if item['Change'] >= 0 else "▼"
                         
+                        # Add watchlist card CSS if not already added
+                        if 'watchlist_cards_css_added' not in st.session_state:
+                            st.markdown("""
+                            <style>
+                                .watchlist-card {
+                                    background-color: #1e2138;
+                                    border-radius: 5px;
+                                    padding: 10px;
+                                    margin-bottom: 10px;
+                                }
+                                .watchlist-header {
+                                    display: flex;
+                                    justify-content: space-between;
+                                }
+                                .watchlist-symbol {
+                                    font-weight: bold;
+                                }
+                                .watchlist-change-positive {
+                                    color: green;
+                                }
+                                .watchlist-change-negative {
+                                    color: red;
+                                }
+                                .watchlist-price {
+                                    margin-top: 5px;
+                                    font-size: 1.2em;
+                                    font-weight: bold;
+                                }
+                            </style>
+                            """, unsafe_allow_html=True)
+                            st.session_state.watchlist_cards_css_added = True
+                            
+                        change_class = "watchlist-change-positive" if item['Change'] >= 0 else "watchlist-change-negative"
+                        change_icon = "▲" if item['Change'] >= 0 else "▼"
+                        
                         st.markdown(f"""
-                        <div style="background-color: #1e2138; border-radius: 5px; padding: 10px; margin-bottom: 10px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <div style="font-weight: bold;">{item['Symbol']}</div>
-                                <div style="color: {change_color};">
+                        <div class="watchlist-card">
+                            <div class="watchlist-header">
+                                <div class="watchlist-symbol">{item['Symbol']}</div>
+                                <div class="{change_class}">
                                     {change_icon} {abs(item['ChangePct']):.2f}%
                                 </div>
                             </div>
-                            <div style="margin-top: 5px; font-size: 1.2em; font-weight: bold;">${item['Price']:.2f}</div>
+                            <div class="watchlist-price">${item['Price']:.2f}</div>
                         </div>
                         """, unsafe_allow_html=True)
                         
-                        # Quick action buttons
+                        # Quick action buttons with more specific keys to avoid duplication
                         btn_col1, btn_col2 = st.columns(2)
                         with btn_col1:
-                            if st.button("Buy", key=f"quick_buy_{item['Symbol']}"):
+                            # Create a unique key by including both symbol and position in the watchlist
+                            if st.button("Buy", key=f"watchlist_quick_buy_{item['Symbol']}_{i}"):
                                 st.session_state[f"show_trade_{item['Symbol']}"] = "BUY"
                         
                         with btn_col2:
-                            if st.button("Remove", key=f"remove_{item['Symbol']}"):
+                            if st.button("Remove", key=f"watchlist_remove_{item['Symbol']}_{i}"):
                                 st.session_state.watchlist.remove(item['Symbol'])
                                 st.success(f"Removed {item['Symbol']} from watchlist")
                                 st.rerun()

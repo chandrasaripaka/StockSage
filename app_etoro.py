@@ -76,6 +76,75 @@ st.markdown("""
         border: 1px solid var(--border-color);
     }
     
+    /* Trader card components */
+    .trader-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .trader-profile {
+        display: flex;
+        align-items: center;
+    }
+    
+    .trader-avatar {
+        font-size: 30px;
+        margin-right: 10px;
+    }
+    
+    .trader-info {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .trader-name {
+        margin: 0;
+        font-size: 1.17em;
+        font-weight: bold;
+    }
+    
+    .trader-followers {
+        margin: 0;
+        color: #888;
+    }
+    
+    .trader-performance {
+        font-weight: bold;
+        font-size: 20px;
+    }
+    
+    .trader-positive {
+        color: green;
+    }
+    
+    .trader-negative {
+        color: red;
+    }
+    
+    .trader-description {
+        margin-top: 10px;
+    }
+    
+    .trader-stats {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+    }
+    
+    .trader-portfolio {
+        display: flex;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+    
+    .portfolio-stock {
+        background-color: #2a2d48;
+        padding: 5px;
+        margin: 2px;
+        border-radius: 5px;
+    }
+    
     /* Button styling */
     .green-button {
         background-color: var(--accent-color);

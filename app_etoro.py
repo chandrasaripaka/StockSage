@@ -3526,7 +3526,7 @@ with tabs[4]:
             else:
                 display_segment_type = "Closed"
                 
-            market_hours_html += f"""
+            market_hours_html += f"""<div>
             <div style="flex: 1; text-align: center; padding: 10px 5px; background-color: {bg_color}; 
                        border: {border}; border-radius: 5px; margin: 0 2px; min-width: 70px; 
                        font-weight: {font_weight}; color: {text_color};">
@@ -3535,7 +3535,7 @@ with tabs[4]:
             </div>
             """
         
-        market_hours_html += "</div>"
+        #market_hours_html += "</div>"
         st.markdown(market_hours_html, unsafe_allow_html=True)
         
         # Add legend

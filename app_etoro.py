@@ -3568,13 +3568,18 @@ with tabs[4]:
                 popular_stocks = [
                     "AAPL", "MSFT", "AMZN", "TSLA", "GOOGL", "META", "NVDA", "AMD", 
                     "NFLX", "DIS", "PYPL", "INTC", "CSCO", "ADBE", "CRM", "SHOP",
-                    "ZM", "ROKU", "SQ", "TWLO", "SNAP", "PINS", "UBER", "LYFT", "PLTR"
+                    "ZM", "ROKU", "TWLO", "SNAP", "PINS", "UBER", "LYFT", "PLTR"
                 ]
                 
                 movers_data = []
                 for symbol in popular_stocks:
                     ticker = yf.Ticker(symbol)
                     info = ticker.info
+                    
+                    # Skip if the info is None
+                    if info is None:
+                        continue
+                        
                     current_price = info.get('regularMarketPrice', 0)
                     prev_price = info.get('previousClose', 0)
                     

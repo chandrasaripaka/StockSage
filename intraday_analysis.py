@@ -57,15 +57,19 @@ class IntradayAnalysis:
             else:
                 data['Datetime'] = data['Datetime'].dt.tz_convert(self.eastern_tz)
             
-            # Rename columns to match our standard format
-            data = data.rename(columns={
-                'Datetime': 'datetime',
-                'Open': 'open',
-                'High': 'high',
-                'Low': 'low',
-                'Close': 'close',
-                'Volume': 'volume'
-            })
+            # Check if the columns need lowercase renaming
+            # First, check if we have capital-case column names
+            if 'Open' in data.columns and 'High' in data.columns and 'Low' in data.columns and 'Close' in data.columns:
+                # Rename columns to match our standard format
+                data = data.rename(columns={
+                    'Datetime': 'datetime',
+                    'Open': 'open',
+                    'High': 'high',
+                    'Low': 'low',
+                    'Close': 'close',
+                    'Volume': 'volume'
+                })
+            # Otherwise, assume columns are already lowercase
             
             self.logger.info(f"Retrieved {len(data)} intraday data points for {symbol}")
             return data

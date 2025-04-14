@@ -4409,7 +4409,7 @@ with tabs[4]:
                         range_percent = (daily_range / open_price) * 100
                         
                         # VWAP (Volume Weighted Average Price)
-                        intraday_data['vwap'] = (intraday_data['Close'] * intraday_data['Volume']).cumsum() / intraday_data['Volume'].cumsum()
+                        intraday_data['vwap'] = (intraday_data['close'] * intraday_data['volume']).cumsum() / intraday_data['volume'].cumsum()
                         last_vwap = intraday_data['vwap'].iloc[-1]
                         
                         # Price relative to VWAP

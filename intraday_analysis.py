@@ -5,6 +5,7 @@ import yfinance as yf
 import logging
 from stock_analysis import get_stock_data
 import pytz
+from utils import standardize_dataframe_columns
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
@@ -64,19 +65,8 @@ class IntradayAnalysis:
             elif 'datetime' in data.columns:
                 data['Datetime'] = data['datetime']
                 
-            # Handle OHLCV columns
-            if 'Open' in data.columns:
-                data['open'] = data['Open']
-                data['high'] = data['High']  
-                data['low'] = data['Low']
-                data['close'] = data['Close']
-                data['volume'] = data['Volume']
-            elif 'open' in data.columns:
-                data['Open'] = data['open']
-                data['High'] = data['high']
-                data['Low'] = data['low']
-                data['Close'] = data['close']
-                data['Volume'] = data['volume']
+            # Use our standardize_dataframe_columns utility to handle OHLCV columns
+            data = standardize_dataframe_columns(data)
             
             self.logger.info(f"Retrieved {len(data)} intraday data points for {symbol}")
             return data

@@ -23,7 +23,13 @@ from stock_analysis import (
 from utils import format_large_number, format_percentage
 from db_models import Session, Strategy, Trade, PerformanceMetric, engine, db_session
 from tiger_client import TigerBrokersClient
-from trading_bot import TradingBot
+# Import TradingBot class (commented out for now until import issues are resolved)
+try:
+    from trading_bot import TradingBot
+    has_trading_bot = True
+except ImportError:
+    print("Warning: Could not import TradingBot, trading robot features will be disabled")
+    has_trading_bot = False
 from risk_management import RiskManager
 from intraday_analysis import IntradayAnalysis
 
@@ -3434,8 +3440,7 @@ with tabs[4]:
         
         # Create the HTML for the timeline
         market_hours_html = """
-        <div style="display: flex; flex-wrap: nowrap; overflow-x: auto; margin: 10px 0; padding-bottom: 10px; width: 100%;">
-        """
+        <div style="display: flex; flex-wrap: nowrap; overflow-x: auto; margin: 10px 0; padding-bottom: 10px; width: 100%;">"""
         
         # Add each hour to the timeline
         for hour in range(24):
@@ -3509,12 +3514,24 @@ with tabs[4]:
                 font_weight = "bold"
             
             # Add the hour cell
+            
+            # Make consistent naming for the segments
+            display_segment_type = segment_type
+            if segment_type == "Regular Hours":
+                display_segment_type = "Regular Hours"
+            elif segment_type == "Pre-Market":
+                display_segment_type = "Pre Market"
+            elif segment_type == "After Hours":
+                display_segment_type = "After Hours"
+            else:
+                display_segment_type = "Closed"
+                
             market_hours_html += f"""
             <div style="flex: 1; text-align: center; padding: 10px 5px; background-color: {bg_color}; 
                        border: {border}; border-radius: 5px; margin: 0 2px; min-width: 70px; 
                        font-weight: {font_weight}; color: {text_color};">
                 {hour_label}
-                <div style="font-size: 0.8em;">{segment_type}</div>
+                <div style="font-size: 0.8em;">{display_segment_type}</div>
             </div>
             """
         
@@ -3525,7 +3542,7 @@ with tabs[4]:
         st.markdown("""
         <div style="display: flex; margin-top: 5px; font-size: 0.9em;">
             <div style="margin-right: 15px;"><span style="background-color: #1e4e37; padding: 2px 8px; border-radius: 3px;">Regular Hours</span></div>
-            <div style="margin-right: 15px;"><span style="background-color: #2c3154; padding: 2px 8px; border-radius: 3px;">Pre-Market</span></div>
+            <div style="margin-right: 15px;"><span style="background-color: #2c3154; padding: 2px 8px; border-radius: 3px;">Pre Market</span></div>
             <div style="margin-right: 15px;"><span style="background-color: #4e351e; padding: 2px 8px; border-radius: 3px;">After Hours</span></div>
             <div><span style="background-color: #2a2a2a; padding: 2px 8px; border-radius: 3px;">Closed</span></div>
         </div>

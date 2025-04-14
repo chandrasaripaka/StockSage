@@ -1,0 +1,154 @@
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2a2a2a; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    12 AM
+    <div style="font-size: 0.8em;">Closed</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2a2a2a; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    1 AM
+    <div style="font-size: 0.8em;">Closed</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2a2a2a; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    2 AM
+    <div style="font-size: 0.8em;">Closed</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2a2a2a; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    3 AM
+    <div style="font-size: 0.8em;">Closed</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2c3154; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    4 AM
+    <div style="font-size: 0.8em;">Pre Market</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2c3154; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    5 AM
+    <div style="font-size: 0.8em;">Pre Market</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2c3154; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    6 AM
+    <div style="font-size: 0.8em;">Pre Market</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2c3154; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    7 AM
+    <div style="font-size: 0.8em;">Pre Market</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2c3154; 
+            border: 2px solid white; border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: bold;">
+    8 AM
+    <div style="font-size: 0.8em;">Pre Market</div>
+</div>
+
+    <div style="flex: 0.5; text-align: center; padding: 10px 5px; background-color: #2c3154; 
+                border: 1px solid rgba(255,255,255,0.1); 
+                border-radius: 5px; margin: 0 2px; min-width: 50px; 
+                font-weight: normal;">
+        9:00 AM
+        <div style="font-size: 0.8em;">Pre Market</div>
+    </div>
+
+    <div style="flex: 0.5; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
+                border: 1px solid rgba(255,255,255,0.1); 
+                border-radius: 5px; margin: 0 2px; min-width: 50px; 
+                font-weight: normal;">
+        9:30 AM
+        <div style="font-size: 0.8em;">Regular Hours</div>
+    </div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    10 AM
+    <div style="font-size: 0.8em;">Regular</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    11 AM
+    <div style="font-size: 0.8em;">Regular</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    12 PM
+    <div style="font-size: 0.8em;">Regular</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    1 PM
+    <div style="font-size: 0.8em;">Regular</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    2 PM
+    <div style="font-size: 0.8em;">Regular</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #1e4e37; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    3 PM
+    <div style="font-size: 0.8em;">Regular</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #4e351e; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    4 PM
+    <div style="font-size: 0.8em;">After Hours</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #4e351e; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    5 PM
+    <div style="font-size: 0.8em;">After Hours</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #4e351e; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    6 PM
+    <div style="font-size: 0.8em;">After Hours</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #4e351e; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    7 PM
+    <div style="font-size: 0.8em;">After Hours</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2a2a2a; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    8 PM
+    <div style="font-size: 0.8em;">Closed</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2a2a2a; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    9 PM
+    <div style="font-size: 0.8em;">Closed</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2a2a2a; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    10 PM
+    <div style="font-size: 0.8em;">Closed</div>
+</div>
+
+<div style="flex: 1; text-align: center; padding: 10px 5px; background-color: #2a2a2a; 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; margin: 0 2px; min-width: 70px; font-weight: normal;">
+    11 PM
+    <div style="font-size: 0.8em;">Closed</div>
+</div>
+</div>

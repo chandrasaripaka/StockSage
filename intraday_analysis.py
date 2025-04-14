@@ -5,6 +5,7 @@ import yfinance as yf
 import logging
 from stock_analysis import get_stock_data
 import pytz
+from utils import standardize_dataframe_columns
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
@@ -57,15 +58,15 @@ class IntradayAnalysis:
             else:
                 data['Datetime'] = data['Datetime'].dt.tz_convert(self.eastern_tz)
             
-            # Rename columns to match our standard format
-            data = data.rename(columns={
-                'Datetime': 'datetime',
-                'Open': 'open',
-                'High': 'high',
-                'Low': 'low',
-                'Close': 'close',
-                'Volume': 'volume'
-            })
+            # Make sure we have needed columns in both uppercase and lowercase
+            # This ensures compatibility with all parts of the app regardless of naming convention
+            if 'Datetime' in data.columns:
+                data['datetime'] = data['Datetime']
+            elif 'datetime' in data.columns:
+                data['Datetime'] = data['datetime']
+                
+            # Use our standardize_dataframe_columns utility to handle OHLCV columns
+            data = standardize_dataframe_columns(data)
             
             self.logger.info(f"Retrieved {len(data)} intraday data points for {symbol}")
             return data

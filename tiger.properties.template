@@ -1,0 +1,4 @@
+tiger_id=${TIGER_ID}
+private_key=tiger_private_key.pem
+private_key_password=${TIGER_PRIVATE_KEY_PASSWORD}
+language=en_US

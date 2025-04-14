@@ -2877,8 +2877,8 @@ with tabs[3]:
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            scalp_symbol = st.text_input("Symbol", "SPY", key="scalp_symbol")
-            scalp_timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m"], key="scalp_timeframe")
+            scalp_symbol = st.text_input("Symbol", "SPY", key="scalp_symbol_strategy")
+            scalp_timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m"], key="scalp_timeframe_strategy")
             scalp_days = st.number_input("Days to Analyze", 1, 10, 3, key="scalp_days")
         
         with col2:
@@ -4892,12 +4892,12 @@ with tabs[4]:
         scalp_col1, scalp_col2 = st.columns(2)
         
         with scalp_col1:
-            scalp_symbol = st.text_input("Symbol", value="AAPL", key="scalp_symbol")
+            scalp_symbol = st.text_input("Symbol", value="AAPL", key="scalp_symbol_intraday")
             scalp_timeframe = st.selectbox(
                 "Timeframe",
                 ["1m", "5m", "15m"],
                 index=1,  # Default to 5m
-                key="scalp_timeframe"
+                key="scalp_timeframe_intraday"
             )
             
         with scalp_col2:
